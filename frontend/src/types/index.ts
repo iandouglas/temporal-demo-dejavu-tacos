@@ -1,7 +1,7 @@
 export type ArchitectureMode = 'traditional' | 'temporal'
 export type FailureScenario = 'none' | 'store_connectivity' | 'payment_error' | 'random_chaos'
 export type PresentationMode = 'simple' | 'detailed'
-export type WorkerLanguage = 'python' | 'go' | 'java' | 'dotnet' | 'typescript'
+export type WorkerLanguage = 'python' | 'go' | 'java' | 'dotnet' | 'typescript' | 'rust' | 'php'
 export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'retrying'
 
 export interface Settings {

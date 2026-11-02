@@ -1,5 +1,6 @@
-import type { ArchitectureMode, FailureScenario, PresentationMode, Settings, WorkerLanguage } from '../types'
-import { WORKFLOW_LANGUAGES } from '../data/workflowCode'
+import { useEffect, useRef } from 'react'
+import { FAILURES, MODES, PRESENTATION, type Option } from '../data/scenarios'
+import type { Settings } from '../types'
 
 interface SettingsModalProps {
   open: boolean
@@ -9,207 +10,99 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onClose, settings, onSave }: SettingsModalProps) {
-  if (!open) return null
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
-  const handleChange = (key: keyof Settings, value: string) => {
-    const updated = { ...settings, [key]: value }
-    onSave(updated)
+  // A native <dialog> gives focus trapping, Escape and the backdrop for free.
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (open && !dialog.open) dialog.showModal()
+    if (!open && dialog.open) dialog.close()
+  }, [open])
+
+  const set = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+    if (settings[key] !== value) onSave({ ...settings, [key]: value })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative bg-gray-800 rounded-2xl shadow-2xl w-[440px] max-h-[80vh] overflow-y-auto border border-gray-700">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">⚙️</span>
-            <h2 className="text-lg font-bold text-gray-200">Demo Settings</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-300 text-xl"
-          >
-            ✕
-          </button>
+    <dialog
+      ref={dialogRef}
+      className="settings-dialog"
+      aria-labelledby="settings-title"
+      onClose={onClose}
+      onClick={(e) => {
+        // A click on the backdrop lands on the dialog element itself.
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="card-head">
+        <div>
+          <p className="eyebrow">Presenter</p>
+          <h2 id="settings-title" className="heading">Demo settings</h2>
         </div>
-
-        <div className="p-6 space-y-6">
-          {/* Architecture Mode */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">
-              Architecture Mode
-            </h3>
-            <div className="space-y-2">
-              <RadioOption
-                name="mode"
-                value="traditional"
-                checked={settings.mode === 'traditional'}
-                onChange={(v) => handleChange('mode', v as ArchitectureMode)}
-                label="Traditional (Direct Calls)"
-                description="Sequential service calls with no retry or compensation"
-                color="red"
-              />
-              <RadioOption
-                name="mode"
-                value="temporal"
-                checked={settings.mode === 'temporal'}
-                onChange={(v) => handleChange('mode', v as ArchitectureMode)}
-                label="Temporal"
-                description="Durable workflow with retries, signals, and compensation"
-                color="purple"
-              />
-            </div>
-          </div>
-
-          {/* Failure Scenario */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">
-              Failure Scenario
-            </h3>
-            <div className="space-y-2">
-              <RadioOption
-                name="failure"
-                value="none"
-                checked={settings.failure_scenario === 'none'}
-                onChange={(v) => handleChange('failure_scenario', v as FailureScenario)}
-                label="None (Happy Path)"
-                description="Everything works perfectly"
-                color="green"
-              />
-              <RadioOption
-                name="failure"
-                value="store_connectivity"
-                checked={settings.failure_scenario === 'store_connectivity'}
-                onChange={(v) => handleChange('failure_scenario', v as FailureScenario)}
-                label="Store Connectivity Failure"
-                description="Store loses internet mid-order (default)"
-                color="yellow"
-              />
-              <RadioOption
-                name="failure"
-                value="payment_error"
-                checked={settings.failure_scenario === 'payment_error'}
-                onChange={(v) => handleChange('failure_scenario', v as FailureScenario)}
-                label="Payment Service Error"
-                description="Payment gateway times out"
-                color="yellow"
-              />
-              <RadioOption
-                name="failure"
-                value="random_chaos"
-                checked={settings.failure_scenario === 'random_chaos'}
-                onChange={(v) => handleChange('failure_scenario', v as FailureScenario)}
-                label="Random Chaos"
-                description="30% chance of failure at any step"
-                color="red"
-              />
-            </div>
-          </div>
-
-          {/* Presentation Mode */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">
-              Presentation Mode
-            </h3>
-            <div className="space-y-2">
-              <RadioOption
-                name="presentation"
-                value="simple"
-                checked={settings.presentation_mode === 'simple'}
-                onChange={(v) => handleChange('presentation_mode', v as PresentationMode)}
-                label="Simple"
-                description="High-level step status only"
-                color="blue"
-              />
-              <RadioOption
-                name="presentation"
-                value="detailed"
-                checked={settings.presentation_mode === 'detailed'}
-                onChange={(v) => handleChange('presentation_mode', v as PresentationMode)}
-                label="Detailed"
-                description="Show retries, error messages, and payloads"
-                color="blue"
-              />
-            </div>
-          </div>
-
-          {/* Worker Language */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">
-              Worker Language
-            </h3>
-            <div className="space-y-2">
-              {WORKFLOW_LANGUAGES.map((lang) => (
-                <RadioOption
-                  key={lang.id}
-                  name="language"
-                  value={lang.id}
-                  checked={settings.worker_language === lang.id}
-                  onChange={(v) => handleChange('worker_language', v as WorkerLanguage)}
-                  label={lang.label}
-                  description={lang.filename}
-                  color="blue"
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-700 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
-          >
-            Close
-          </button>
-        </div>
+        <button
+          type="button"
+          className="button ghost slate icon small"
+          aria-label="Close"
+          title="Close"
+          onClick={onClose}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
       </div>
-    </div>
+
+      <div className="settings-body">
+        <Group label="Architecture" options={MODES} value={settings.mode} onChange={(v) => set('mode', v)} />
+        <Group
+          label="Failure scenario"
+          options={FAILURES}
+          value={settings.failure_scenario}
+          onChange={(v) => set('failure_scenario', v)}
+        />
+        <Group
+          label="Presentation"
+          options={PRESENTATION}
+          value={settings.presentation_mode}
+          onChange={(v) => set('presentation_mode', v)}
+        />
+      </div>
+
+      <p className="muted">Changing a setting starts a fresh order.</p>
+    </dialog>
   )
 }
 
-function RadioOption({
-  name,
-  value,
-  checked,
-  onChange,
+function Group<V extends string>({
   label,
-  description,
+  options,
+  value,
+  onChange,
 }: {
-  name: string
-  value: string
-  checked: boolean
-  onChange: (value: string) => void
   label: string
-  description: string
-  color: string
+  options: Option<V>[]
+  value: V
+  onChange: (value: V) => void
 }) {
   return (
-    <label
-      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-gray-600 ${
-        checked ? 'border-orange-500 bg-orange-500/10' : 'border-gray-700 bg-gray-800'
-      }`}
-    >
-      <input
-        type="radio"
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={() => onChange(value)}
-        className="mt-0.5 accent-orange-500"
-      />
-      <div>
-        <p className="text-sm font-semibold text-gray-200">{label}</p>
-        <p className="text-xs text-gray-400">{description}</p>
+    <section className="settings-group" aria-label={label}>
+      <p className="eyebrow">{label}</p>
+      <div className="scenario-list" role="group" aria-label={label}>
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            className="scenario"
+            data-status={o.status}
+            aria-pressed={o.value === value}
+            onClick={() => onChange(o.value)}
+          >
+            <span className="scenario-name">{o.name}</span>
+            <span className="scenario-note">{o.note}</span>
+          </button>
+        ))}
       </div>
-    </label>
+    </section>
   )
 }

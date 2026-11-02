@@ -25,7 +25,7 @@ export interface LanguageDef {
   filename: string;
   code: CodeLine[];
   compensation: CodeLine[];
-  /** Regex replacements applied in order for syntax highlighting */
+  /** Regex rules applied in order; className is a kit code-view token: k keyword, f function, s string, t type/number/constant */
   highlighting: { pattern: RegExp; className: string }[];
 }
 
@@ -148,16 +148,16 @@ const pythonHighlighting = [
   {
     pattern:
       /\b(class|async|def|await|if|return|except|lambda|self|for|in|try)\b/g,
-    className: "text-purple-400 font-semibold",
+    className: "k",
   },
-  { pattern: /\b(workflow|RetryPolicy)\b/g, className: "text-blue-300" },
+  { pattern: /\b(workflow|RetryPolicy)\b/g, className: "t" },
   {
     pattern:
       /(validate_order|validate_store|authorize_payment|clear_cart|submit_to_store|capture_payment|release_payment_hold|release_hold|wait_condition|execute_activity|order_ready|compensations|reversed|append)\b/g,
-    className: "text-amber-300",
+    className: "f",
   },
-  { pattern: /(max)=/g, className: "text-orange-300" },
-  { pattern: /\b(\d+)\b/g, className: "text-cyan-300" },
+  { pattern: /(max)=/g, className: "t" },
+  { pattern: /\b(\d+)\b/g, className: "t" },
 ];
 
 // ─── Go ──────────────────────────────────────────────────────────
@@ -297,24 +297,24 @@ const goHighlighting = [
   {
     pattern:
       /\b(func|var|err|return|for|if|range|nil|true|false|append|len|defer)\b/g,
-    className: "text-purple-400 font-semibold",
+    className: "k",
   },
   {
     pattern:
       /\b(workflow|temporal|RetryPolicy|Context|OrderInput|Result|Compensations)\b/g,
-    className: "text-blue-300",
+    className: "t",
   },
   {
     pattern:
       /(ExecuteActivity|WithActivityOptions|GetSignalChannel|Receive|Get|NewDisconnectedContext|MaxAttempts|AddCompensation|Compensate|Await)\b/g,
-    className: "text-amber-300",
+    className: "f",
   },
   {
     pattern:
       /("ValidateOrder"|"ValidateStore"|"AuthorizePayment"|"ClearCart"|"SubmitToStore"|"CapturePayment"|"order_ready")/g,
-    className: "text-green-300",
+    className: "s",
   },
-  { pattern: /\b(\d+)\b/g, className: "text-cyan-300" },
+  { pattern: /\b(\d+)\b/g, className: "t" },
 ];
 
 // ─── TypeScript ─────────────────────────────────────────────────
@@ -411,24 +411,24 @@ const typescriptHighlighting = [
   {
     pattern:
       /\b(const|let|async|function|await|return|for|of|try|catch|export|throw|new)\b/g,
-    className: "text-purple-400 font-semibold",
+    className: "k",
   },
   {
     pattern:
       /\b(proxyActivities|CancellationScope|condition|setHandler|defineSignal|defineQuery)\b/g,
-    className: "text-blue-300",
+    className: "t",
   },
   {
     pattern:
       /(validateOrder|validateStore|authorizePayment|clearCart|submitToStore|capturePayment|releasePaymentHold|notifyCustomer|nonCancellable|compensations|reverse|orderReady|orderReadySignal)\b/g,
-    className: "text-amber-300",
+    className: "f",
   },
   {
     pattern: /\b(Activities|OrderInput|Result|Compensation|Promise)\b/g,
-    className: "text-green-300",
+    className: "s",
   },
-  { pattern: /'[^']*'/g, className: "text-green-300" },
-  { pattern: /\b(\d+)\b/g, className: "text-cyan-300" },
+  { pattern: /'[^']*'/g, className: "s" },
+  { pattern: /\b(\d+)\b/g, className: "t" },
 ];
 
 // ─── Java ───────────────────────────────────────────────────────
@@ -516,25 +516,25 @@ const javaHighlighting = [
   {
     pattern:
       /\b(public|class|interface|void|new|try|catch|return|Map|String|Object)\b/g,
-    className: "text-purple-400 font-semibold",
+    className: "k",
   },
   {
     pattern: /\b(Workflow|Saga|OrderActivities|ActivityOptions|RetryOptions)\b/g,
-    className: "text-blue-300",
+    className: "t",
   },
   {
     pattern:
       /(validateOrder|validateStore|authorizePayment|clearCart|submitToStore|capturePayment|releasePaymentHold|notifyCustomer|addCompensation|compensate|await|newActivityStub|orderReady)\b/g,
-    className: "text-amber-300",
+    className: "f",
   },
   {
     pattern:
       /\b(OrderInput|Options|Builder)\b/g,
-    className: "text-green-300",
+    className: "s",
   },
-  { pattern: /@\w+/g, className: "text-yellow-400" },
-  { pattern: /\b(\d+)\b/g, className: "text-cyan-300" },
-  { pattern: /\b(true|false|null)\b/g, className: "text-cyan-300" },
+  { pattern: /@\w+/g, className: "k" },
+  { pattern: /\b(\d+)\b/g, className: "t" },
+  { pattern: /\b(true|false|null)\b/g, className: "t" },
 ];
 
 // ─── .NET (C#) ──────────────────────────────────────────────────
@@ -676,25 +676,168 @@ const dotnetHighlighting = [
   {
     pattern:
       /\b(public|class|async|await|var|new|try|catch|return|for|int)\b/g,
-    className: "text-purple-400 font-semibold",
+    className: "k",
   },
   {
     pattern:
       /\b(Workflow|Task|List|Func|ActivityOptions|RetryPolicy)\b/g,
-    className: "text-blue-300",
+    className: "t",
   },
   {
     pattern:
       /(ValidateOrder|ValidateStore|AuthorizePayment|ClearCart|SubmitToStore|CapturePayment|ReleasePaymentHold|NotifyCustomer|ExecuteActivityAsync|WaitConditionAsync|Add|compensations|orderReady)\b/g,
-    className: "text-amber-300",
+    className: "f",
   },
   {
     pattern: /\b(OrderInput|OrderWorkflow|Result|Exception)\b/g,
-    className: "text-green-300",
+    className: "s",
   },
-  { pattern: /\[.*?\]/g, className: "text-yellow-400" },
-  { pattern: /\b(\d+)\b/g, className: "text-cyan-300" },
-  { pattern: /\b(true|false|null)\b/g, className: "text-cyan-300" },
+  { pattern: /\[.*?\]/g, className: "k" },
+  { pattern: /\b(\d+)\b/g, className: "t" },
+  { pattern: /\b(true|false|null)\b/g, className: "t" },
+];
+
+// ─── Rust ───────────────────────────────────────────────────────
+// Illustrative: the Rust SDK is pre-release and its API is still moving.
+
+const rustCode: CodeLine[] = [
+  { text: "#[workflow]", indent: 0, isDecorator: true },
+  { text: "pub struct OrderWorkflow { order_ready: bool }", indent: 0 },
+  { text: "", indent: 0, isBlank: true },
+  { text: "#[workflow_methods]", indent: 0, isDecorator: true },
+  { text: "impl OrderWorkflow {", indent: 0 },
+  { text: "#[run]", indent: 1, isDecorator: true },
+  { text: "pub async fn run(ctx: &mut WorkflowContext<Self>,", indent: 1 },
+  { text: "    order: OrderInput) -> WorkflowResult<OrderResult> {", indent: 1 },
+  { text: "", indent: 0, isBlank: true },
+  { text: "let mut compensations = Vec::new();", indent: 2 },
+  { text: "let result: Result<_, _> = async {", indent: 2 },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Validate the order and store", indent: 3, isComment: true },
+  { text: "ctx.activity(Acts::validate_order, &order).await?;", indent: 3, step: "validate_order" },
+  { text: "ctx.activity(Acts::validate_store, &order).await?;", indent: 3, step: "validate_store" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Hold payment — register compensation first", indent: 3, isComment: true },
+  { text: "compensations.push(Acts::release_payment_hold);", indent: 3, step: "authorize_payment" },
+  { text: "let auth = ctx", indent: 3, step: "authorize_payment" },
+  { text: "    .activity(Acts::authorize_payment, &order).await?;", indent: 3, step: "authorize_payment" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "ctx.activity(Acts::clear_cart, &order).await?;", indent: 3, step: "clear_cart" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Submit — retries automatically", indent: 3, isComment: true },
+  { text: "ctx.activity_with(Acts::submit_to_store, &order,", indent: 3, step: "submit_to_store" },
+  { text: "    RetryPolicy { maximum_attempts: 10, .. }).await?;", indent: 3, step: "submit_to_store" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Wait for signal — human in the loop", indent: 3, isComment: true },
+  { text: "ctx.wait_condition(|s| s.order_ready).await;", indent: 3, step: "order_ready" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Capture only after confirmation", indent: 3, isComment: true },
+  { text: "ctx.activity(Acts::capture_payment, &auth).await", indent: 3, step: "capture_payment" },
+  { text: "}.await;", indent: 2 },
+];
+
+const rustCompensation: CodeLine[] = [
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Saga: run compensations in reverse", indent: 2, isComment: true },
+  { text: "if result.is_err() {", indent: 2 },
+  { text: "for comp in compensations.into_iter().rev() {", indent: 3, step: "release_payment_hold" },
+  { text: "ctx.activity(comp, &order).await?;", indent: 4, step: "release_payment_hold" },
+  { text: "}", indent: 3 },
+  { text: "}", indent: 2 },
+  { text: "result", indent: 2 },
+  { text: "}", indent: 1 },
+  { text: "}", indent: 0 },
+];
+
+const rustHighlighting = [
+  {
+    pattern:
+      /\b(pub|struct|impl|async|fn|await|let|mut|for|in|if|Self|self|return)\b/g,
+    className: "k",
+  },
+  {
+    pattern: /\b(WorkflowContext|WorkflowResult|RetryPolicy|Vec|Result|Acts)\b/g,
+    className: "t",
+  },
+  {
+    pattern:
+      /(validate_order|validate_store|authorize_payment|clear_cart|submit_to_store|capture_payment|release_payment_hold|activity_with|activity|wait_condition|order_ready|compensations|push|into_iter|rev|is_err)\b/g,
+    className: "f",
+  },
+  {
+    pattern: /\b(OrderInput|OrderResult|OrderWorkflow)\b/g,
+    className: "s",
+  },
+  { pattern: /(maximum_attempts):/g, className: "t" },
+  { pattern: /\b(\d+)\b/g, className: "t" },
+  { pattern: /\b(true|false)\b/g, className: "t" },
+];
+
+// ─── PHP ────────────────────────────────────────────────────────
+// PHP SDK ships a Saga helper and uses generators (yield) for awaiting.
+
+const phpCode: CodeLine[] = [
+  { text: "#[WorkflowInterface]", indent: 0, isDecorator: true },
+  { text: "class OrderWorkflow {", indent: 0 },
+  { text: "private bool $orderReady = false;", indent: 1 },
+  { text: "", indent: 0, isBlank: true },
+  { text: "#[WorkflowMethod]", indent: 1, isDecorator: true },
+  { text: "public function run(array $order) {", indent: 1 },
+  { text: "$saga = new Workflow\\Saga();", indent: 2 },
+  { text: "try {", indent: 2 },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Validate the order and store", indent: 3, isComment: true },
+  { text: "yield $this->acts->validateOrder($order);", indent: 3, step: "validate_order" },
+  { text: "yield $this->acts->validateStore($order);", indent: 3, step: "validate_store" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Hold payment — register compensation first", indent: 3, isComment: true },
+  { text: "$saga->addCompensation(fn() =>", indent: 3, step: "authorize_payment" },
+  { text: "    yield $this->acts->releasePaymentHold($order));", indent: 3, step: "authorize_payment" },
+  { text: "$auth = yield $this->acts", indent: 3, step: "authorize_payment" },
+  { text: "    ->authorizePayment($order);", indent: 3, step: "authorize_payment" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "yield $this->acts->clearCart($order);", indent: 3, step: "clear_cart" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Submit — retries automatically", indent: 3, isComment: true },
+  { text: "yield $this->submitActs->submitToStore($order);", indent: 3, step: "submit_to_store" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Wait for signal — human in the loop", indent: 3, isComment: true },
+  { text: "yield Workflow::await(fn() => $this->orderReady);", indent: 3, step: "order_ready" },
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Capture only after confirmation", indent: 3, isComment: true },
+  { text: "yield $this->acts->capturePayment($auth);", indent: 3, step: "capture_payment" },
+];
+
+const phpCompensation: CodeLine[] = [
+  { text: "", indent: 0, isBlank: true },
+  { text: "// Saga: compensate() runs in reverse", indent: 2, isComment: true },
+  { text: "} catch (\\Throwable $e) {", indent: 2 },
+  { text: "yield $saga->compensate();", indent: 3, step: "release_payment_hold" },
+  { text: "throw $e;", indent: 3 },
+  { text: "}", indent: 2 },
+  { text: "}", indent: 1 },
+  { text: "}", indent: 0 },
+];
+
+const phpHighlighting = [
+  {
+    pattern:
+      /\b(class|public|private|function|fn|new|try|catch|throw|yield|return|array|bool)\b/g,
+    className: "k",
+  },
+  { pattern: /\$this\b/g, className: "k" },
+  {
+    pattern: /\b(Workflow|Saga|Throwable)\b/g,
+    className: "t",
+  },
+  {
+    pattern:
+      /(validateOrder|validateStore|authorizePayment|clearCart|submitToStore|capturePayment|releasePaymentHold|addCompensation|compensate|await|orderReady|submitActs|acts)\b/g,
+    className: "f",
+  },
+  { pattern: /\$\w+/g, className: "f" },
+  { pattern: /\b(OrderWorkflow)\b/g, className: "s" },
+  { pattern: /\b(true|false|null)\b/g, className: "t" },
 ];
 
 // ─── Registry ────────────────────────────────────────────────────
@@ -739,6 +882,22 @@ export const WORKFLOW_LANGUAGES: LanguageDef[] = [
     code: dotnetCode,
     compensation: dotnetCompensation,
     highlighting: dotnetHighlighting,
+  },
+  {
+    id: "rust",
+    label: "Rust",
+    filename: "order_workflow.rs",
+    code: rustCode,
+    compensation: rustCompensation,
+    highlighting: rustHighlighting,
+  },
+  {
+    id: "php",
+    label: "PHP",
+    filename: "OrderWorkflow.php",
+    code: phpCode,
+    compensation: phpCompensation,
+    highlighting: phpHighlighting,
   },
 ];
 

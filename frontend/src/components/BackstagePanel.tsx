@@ -1,97 +1,131 @@
-import { useState } from 'react'
+import { BackstagePanel as KitBackstagePanel } from '../kit/react/BackstagePanel'
+import { StepList, type Step } from '../kit/react/StepList'
+import { stepStatus } from '../lib/stepStatus'
 import type { OrderEvent, Settings } from '../types'
-import { WorkflowDiagram } from './WorkflowDiagram'
 
 interface BackstagePanelProps {
   events: OrderEvent[]
   settings: Settings
   finalStatus: string | null
+  workflowId?: string | null
   temporalWorkflowUrl?: string | null
+}
+
+interface StepDef {
+  key: string
+  label: string
+  service: string
+}
+
+const WORKFLOW_STEPS: StepDef[] = [
+  { key: 'validate_order', label: 'Validate order', service: 'Cart service' },
+  { key: 'validate_store', label: 'Validate store', service: 'Store service' },
+  { key: 'authorize_payment', label: 'Authorize payment', service: 'Payment service' },
+  { key: 'clear_cart', label: 'Clear cart', service: 'Cart service' },
+  { key: 'submit_to_store', label: 'Submit to store', service: 'Store service' },
+  { key: 'order_ready', label: 'Wait for order ready', service: 'Signal from the kitchen' },
+  { key: 'capture_payment', label: 'Capture payment', service: 'Payment service' },
+]
+
+const COMPENSATION_STEPS: StepDef[] = [
+  { key: 'release_payment_hold', label: 'Release payment hold', service: 'Payment service' },
+  { key: 'notify_customer', label: 'Notify customer', service: 'Notification service' },
+]
+
+function lastEvent(stepKey: string, events: OrderEvent[]): OrderEvent | undefined {
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i].step === stepKey) return events[i]
+  }
+  return undefined
+}
+
+function toStep(def: StepDef, events: OrderEvent[], detailed: boolean): Step {
+  const last = lastEvent(def.key, events)
+  const status = stepStatus(def.key, last?.status)
+
+  let note: string | undefined
+  if (last && status === 'retrying') {
+    note = `Retry ${last.attempt} of ${last.max_attempts}`
+    if (detailed && last.error) note += ` · ${last.error}`
+  } else if (detailed && last?.error) {
+    note = last.error
+  } else if (detailed && last && last.attempt > 1 && status === 'completed') {
+    note = `Succeeded on attempt ${last.attempt}`
+  }
+
+  return {
+    key: def.key,
+    label: def.label,
+    status,
+    detail: detailed && last?.detail ? last.detail : def.service,
+    note,
+  }
 }
 
 export function BackstagePanel({
   events,
   settings,
   finalStatus,
+  workflowId,
   temporalWorkflowUrl,
 }: BackstagePanelProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const isDetailed = settings.presentation_mode === 'detailed'
+  const isTemporal = settings.mode === 'temporal'
 
-  if (collapsed) {
-    return (
-      <button
-        onClick={() => setCollapsed(false)}
-        className="fixed right-0 top-1/2 -translate-y-1/2 bg-gray-800 text-white px-2 py-4 rounded-l-lg shadow-lg hover:bg-gray-700 transition-colors z-10"
-        title="Show Behind the Scenes"
-      >
-        <span className="writing-mode-vertical text-xs font-mono tracking-wider [writing-mode:vertical-lr]">
-          BEHIND THE SCENES
-        </span>
-      </button>
-    )
-  }
+  const steps = events.length === 0 ? [] : WORKFLOW_STEPS.map((s) => toStep(s, events, isDetailed))
+  const compensation = COMPENSATION_STEPS.filter((s) => lastEvent(s.key, events)).map((s) =>
+    toStep(s, events, isDetailed),
+  )
+
+  const storeFailed =
+    !isTemporal && stepStatus('submit_to_store', lastEvent('submit_to_store', events)?.status) === 'failed'
 
   return (
-    <div className="flex-1 shrink min-w-[250px] max-w-[550px] h-full bg-gray-800 border-l border-gray-700 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-        <div>
-          <h2 className="text-sm font-bold text-gray-200 uppercase tracking-wider">
-            Behind the Scenes
-          </h2>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {settings.mode === 'temporal' ? (
-              <span className="text-purple-400">Temporal Workflow</span>
-            ) : (
-              <span className="text-red-400">Traditional (Direct Calls)</span>
-            )}
-          </p>
-        </div>
-        <button
-          onClick={() => setCollapsed(true)}
-          className="text-gray-500 hover:text-gray-300 text-lg"
-          title="Collapse"
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {events.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-sm">
-              Place an order to see what happens behind the scenes
-            </p>
+    <KitBackstagePanel
+      steps={steps}
+      title="Behind the scenes"
+      subtitle={isTemporal ? 'Temporal Workflow' : 'Traditional · direct service calls'}
+      empty="Place an order to see what happens behind the scenes."
+      workflowId={isTemporal ? workflowId : null}
+      executionUrl={temporalWorkflowUrl}
+      banner={
+        storeFailed ? (
+          <div className="state-banner is-error">
+            <strong>No automatic recovery</strong>
+            The payment hold was placed but the store never received the order. The customer
+            has been charged with no food on the way, and someone has to fix it by hand.
           </div>
-        ) : (
-          <WorkflowDiagram
-            events={events}
-            settings={settings}
-            finalStatus={finalStatus}
-            temporalWorkflowUrl={temporalWorkflowUrl}
-          />
-        )}
-      </div>
+        ) : null
+      }
+    >
+      {compensation.length > 0 && (
+        <>
+          <div className="state-banner">
+            <strong>Compensating</strong>
+            The order can't finish, so the Saga undoes what already happened, newest first.
+          </div>
+          <StepList steps={compensation} className="compensation" />
+        </>
+      )}
 
-      {/* Legend */}
-      <div className="px-4 py-2 border-t border-gray-700 flex flex-wrap gap-3 text-xs">
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-gray-500" /> Pending
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" /> Running
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Done
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" /> Retrying
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Failed
-        </span>
-      </div>
-    </div>
+      {finalStatus === 'completed' && (
+        <aside className="callout" data-status="completed">
+          <p className="eyebrow">Order complete</p>
+          <p>Payment captured after the kitchen confirmed the order was ready.</p>
+        </aside>
+      )}
+      {finalStatus === 'refunded' && (
+        <aside className="callout">
+          <p className="eyebrow">Compensation finished</p>
+          <p>Payment hold released and the customer notified. Nobody was charged for food they won't get.</p>
+        </aside>
+      )}
+      {finalStatus === 'failed' && !isTemporal && (
+        <aside className="callout" data-status="failed">
+          <p className="eyebrow">Order failed</p>
+          <p>Manual intervention required.</p>
+        </aside>
+      )}
+    </KitBackstagePanel>
   )
 }

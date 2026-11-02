@@ -5,11 +5,14 @@ import { Checkout } from './components/Checkout'
 import { KitchenDisplay } from './components/KitchenDisplay'
 import { Menu } from './components/Menu'
 import { OrderTracker } from './components/OrderTracker'
-import { PhoneFrame } from './components/PhoneFrame'
 import { SettingsModal } from './components/SettingsModal'
 import { TemporalCodeView } from './components/TemporalCodeView'
 import { TraditionalArchDiagram } from './components/TraditionalArchDiagram'
+import { pathLabel } from './data/scenarios'
 import { useSSE } from './hooks/useSSE'
+import { PaneCollapseButton, PaneLayout } from './kit/react/PaneLayout'
+import { PhoneFrame } from './kit/react/PhoneFrame'
+import temporalLogo from './kit/brand/temporal-logo.svg'
 import type {
   CartItem,
   CreateOrderResponse,
@@ -36,6 +39,7 @@ function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [temporalUi, setTemporalUi] = useState<TemporalUiInfo | null>(null)
   const [temporalWorkflowUrl, setTemporalWorkflowUrl] = useState<string | null>(null)
+  const [workflowId, setWorkflowId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const { events, finalStatus, reset: resetSSE } = useSSE(orderId)
@@ -72,6 +76,7 @@ function App() {
       // Reset order state when settings change
       setOrderId(null)
       setTemporalWorkflowUrl(null)
+      setWorkflowId(null)
       setScreen('menu')
       setCart([])
       resetSSE()
@@ -120,6 +125,7 @@ function App() {
       const data = (await res.json()) as CreateOrderResponse
       setOrderId(data.order_id)
       setTemporalWorkflowUrl(data.temporal_ui_url || null)
+      setWorkflowId(data.workflow_id || null)
       setScreen('tracking')
     } finally {
       setIsOrdering(false)
@@ -129,6 +135,7 @@ function App() {
   const handleNewOrder = useCallback(() => {
     setOrderId(null)
     setTemporalWorkflowUrl(null)
+    setWorkflowId(null)
     setCart([])
     setScreen('menu')
     resetSSE()
@@ -174,101 +181,130 @@ function App() {
     }
   }
 
+  const isTemporal = settings.mode === 'temporal'
+
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-gray-100">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
-        <div className="flex items-center gap-1">
-          {/* Tab buttons */}
-          <button
-            onClick={() => setTab('customer')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === 'customer'
-                ? 'bg-orange-500 text-white'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-            }`}
-          >
-            📱 Customer App
+    <div className="app-shell two-row">
+      <header className="topbar">
+        <div className="brand">
+          <img src={temporalLogo} alt="Temporal" width="172" height="44" />
+          <span className="brand-divider" />
+          <p className="eyebrow">Déjà Vu Tacos · order Workflow</p>
+        </div>
+
+        <div className="segmented" role="group" aria-label="View">
+          <button type="button" aria-current={tab === 'customer' ? 'page' : undefined} onClick={() => setTab('customer')}>
+            Customer app
           </button>
-          <button
-            onClick={() => setTab('kitchen')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === 'kitchen'
-                ? 'bg-orange-500 text-white'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-            }`}
-          >
-            🖥️ Kitchen Display
+          <button type="button" aria-current={tab === 'kitchen' ? 'page' : undefined} onClick={() => setTab('kitchen')}>
+            Kitchen display
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Mode indicator */}
-          {settings.mode === 'temporal' ? (
-            <a
-              href={temporalUi?.namespace_url || undefined}
-              target="_blank"
-              rel="noreferrer"
-              aria-disabled={!temporalUi?.namespace_url}
-              className={`text-xs px-2 py-1 rounded-full font-medium bg-purple-500/20 text-purple-300 transition-colors ${
-                temporalUi?.namespace_url
-                  ? 'hover:bg-purple-500/30 hover:text-purple-100 cursor-pointer'
-                  : 'cursor-default'
-              }`}
-              onClick={(event) => {
-                if (!temporalUi?.namespace_url) event.preventDefault()
-              }}
-              title={
-                temporalUi?.namespace
-                  ? `Open ${temporalUi.namespace} in Temporal UI`
-                  : 'Open Temporal namespace'
-              }
-            >
-              ⚡ Temporal
-            </a>
-          ) : (
-            <span className="text-xs px-2 py-1 rounded-full font-medium bg-red-500/20 text-red-300">
-              🔗 Traditional
-            </span>
-          )}
-
-          {/* Settings gear */}
+        <div className="topbar-actions">
+          {/* The path the demo is on, where the room can see it. It opens the settings. */}
           <button
+            type="button"
+            className="button secondary ultraviolet small"
             onClick={() => setSettingsOpen(true)}
-            className="text-gray-400 hover:text-gray-200 text-xl transition-colors"
-            title="Demo Settings"
+            aria-haspopup="dialog"
+            title="Change the path: architecture, failure scenario, presentation"
           >
-            ⚙️
+            {pathLabel(settings)}
           </button>
+          {/* Inert rather than absent until the server supplies the URL. */}
+          <a
+            className="button secondary green small"
+            href={temporalUi?.namespace_url || undefined}
+            target={temporalUi?.namespace_url ? '_blank' : undefined}
+            rel="noreferrer"
+            aria-disabled={temporalUi?.namespace_url ? undefined : true}
+            title={
+              temporalUi?.namespace
+                ? `Open ${temporalUi.namespace} in the Temporal UI`
+                : 'Available once the server reports the Temporal UI address'
+            }
+          >
+            Temporal UI
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+          </a>
         </div>
-      </div>
+      </header>
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {tab === 'customer' ? (
-          <div className="flex-1 flex items-stretch overflow-hidden">
-            <PhoneFrame>{renderPhoneContent()}</PhoneFrame>
-            <BackstagePanel
-              events={events}
-              settings={settings}
-              finalStatus={finalStatus}
-              temporalWorkflowUrl={temporalWorkflowUrl}
-            />
-            {/* Third column: complexity diagram (traditional) or code view (temporal) */}
-            <div className="min-w-[33vw] flex-1 flex-shrink-0 bg-gray-850 border-l border-gray-700 overflow-hidden">
-              {settings.mode === 'traditional' ? (
-                <TraditionalArchDiagram events={events} finalStatus={finalStatus} />
-              ) : (
-                <TemporalCodeView events={events} finalStatus={finalStatus} language={settings.worker_language} />
-              )}
-            </div>
+      <main className="min-h-0 min-w-0">
+        {/* The customer view stays mounted so the pane arrangement survives a tab switch. */}
+        <div className="h-full" hidden={tab !== 'customer'}>
+          <PaneLayout
+            storageKey="dejavu-tacos:panes"
+            panes={[
+              {
+                id: 'phone',
+                title: 'Customer app',
+                defaultWidth: 400,
+                minWidth: 260,
+                content: (
+                  <div className="pane-stack">
+                    <div className="card-head pr-2">
+                      <div>
+                        <p className="eyebrow">The product</p>
+                        <h2 className="heading">Customer app</h2>
+                      </div>
+                      <PaneCollapseButton />
+                    </div>
+                    {/* The restaurant's own app: its colours, not Temporal's. */}
+                    <PhoneFrame
+                      chrome="linear-gradient(to right, #f97316, #ef4444)"
+                      background="#fff7ed"
+                      foreground="#1f2937"
+                    >
+                      {renderPhoneContent()}
+                    </PhoneFrame>
+                  </div>
+                ),
+              },
+              {
+                id: 'backstage',
+                title: 'Behind the scenes',
+                defaultWidth: 420,
+                minWidth: 280,
+                content: (
+                  <BackstagePanel
+                    events={events}
+                    settings={settings}
+                    finalStatus={finalStatus}
+                    workflowId={workflowId}
+                    temporalWorkflowUrl={temporalWorkflowUrl}
+                  />
+                ),
+              },
+              {
+                id: 'proof',
+                title: isTemporal ? 'Workflow code' : 'Architecture',
+                minWidth: 320,
+                content: isTemporal ? (
+                  <TemporalCodeView
+                    events={events}
+                    finalStatus={finalStatus}
+                    language={settings.worker_language}
+                    // Display only: switching tabs mid-order keeps the order running.
+                    onLanguageChange={(worker_language) => setSettings((s) => ({ ...s, worker_language }))}
+                  />
+                ) : (
+                  <TraditionalArchDiagram events={events} finalStatus={finalStatus} />
+                ),
+              },
+            ]}
+          />
+        </div>
+        {/* The kitchen is the restaurant's own screen, so it keeps its own look. It polls,
+            so it is only mounted while it is showing. */}
+        {tab === 'kitchen' && (
+          <div className="restaurant-app h-full flex">
+            <KitchenDisplay />
           </div>
-        ) : (
-          <KitchenDisplay />
         )}
-      </div>
+      </main>
 
-      {/* Settings modal */}
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

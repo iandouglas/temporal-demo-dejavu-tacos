@@ -1,12 +1,67 @@
 @import "tailwindcss";
+@import "./kit/css/temporal-tailwind.css";
 
-body {
-  margin: 0;
-  background: #111827;
-  color: #f3f4f6;
-  font-family: system-ui, -apple-system, sans-serif;
-}
+/* ---------- The restaurant's own screens are not Temporal screens ----------
+   The phone app and the kitchen display belong to the fictional restaurant, so they keep
+   their own look.
+   The kit's shell sizes rem from the window (temporal-components.css, "Fit-to-viewport
+   shell"), so the Temporal panels read the same at 13" and on a booth screen. The phone
+   is laid out at a real phone's pixel size and then scaled as a whole, so its Tailwind
+   sizes must not follow the window as well. Inside the phone, the rem-based theme values
+   are pinned back to Tailwind's defaults in px, and the type and colours are the app's
+   own rather than the kit's. The kitchen display gets the same treatment. */
+.phone-content, .restaurant-app {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
 
-#root {
-  min-height: 100vh;
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+  --text-5xl: 48px;
+  --text-6xl: 60px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
 }
+:where(.phone-content, .restaurant-app) :where(button) { font-family: inherit; }
+
+/* ---------- Code view: finished steps ----------
+   The kit's .hl tints the step that is running. Lines whose step has finished keep a
+   quiet edge in their status colour, so the code shows how far the Workflow got. */
+.codeview .ln.done { border-left-color: color-mix(in srgb, var(--status) 55%, transparent); }
+.codeview .ln.blank { min-height: 1.55em; }
+
+/* The app shell: top bar, then the panes. */
+.app-shell.two-row { grid-template-rows: auto minmax(0, 1fr); }
+/* Same height in both modes, whether the right side holds a button or a badge. */
+.app-shell .topbar { min-height: 2.4rem; }
+
+/* The compensation steps sit under the main steps at their natural height. */
+.steps.compensation { flex: none; overflow: visible; }
+
+/* ---------- Settings dialog ---------- */
+/* Tailwind's preflight zeroes margins, which un-centres a modal <dialog>. */
+.settings-dialog { margin: auto; max-height: min(48rem, calc(100dvh - 2rem)); }
+.settings-dialog[open] { display: flex; flex-direction: column; gap: 1rem; }
+.settings-body { display: grid; gap: 1.2rem; overflow-y: auto; min-height: 0; padding-right: .3rem; }
+.settings-group { display: grid; gap: .5rem; }
+.settings-dialog > .muted { margin: 0; }
+
+/* ---------- Architecture diagram (traditional mode) ---------- */
+.arch-svg text { font-family: var(--font-sans, "Manrope", sans-serif); }
+.arch-dots { display: flex; justify-content: center; gap: .35rem; }
+.arch-dots button { width: .5rem; height: .5rem; padding: 0; border: 0; background: var(--slate-500); cursor: pointer; transition: width .2s, background-color .2s; }
+.arch-dots button[aria-current] { width: 1.2rem; background: var(--uv-light); }
+.arch-dots button.seen { background: var(--slate-300); }
+.arch-dots button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--green-soft); }

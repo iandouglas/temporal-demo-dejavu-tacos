@@ -49,7 +49,7 @@ Click **"Plug It Back In"** — the Temporal workflow's retry policy picks up th
 
 ### 3. Compare with Traditional mode
 
-Switch to Traditional mode in settings (gear icon) and place the same order. When the store goes down, the order fails — payment is taken but no food is coming. No retries, no compensation, no recovery.
+Switch to Traditional mode in settings (the path button at the top right, which reads **Temporal · Store connectivity**) and place the same order. When the store goes down, the order fails — payment is taken but no food is coming. No retries, no compensation, no recovery.
 
 ![Traditional mode failure with architecture diagram](docs/screenshots/traditional-failed.png)
 
@@ -67,11 +67,10 @@ The Temporal UI at http://localhost:8233 shows actual workflow executions with f
 
 ## Settings
 
-Click the gear icon to configure:
+Click the path button at the top right (it shows the current architecture and failure scenario) to configure:
 - **Architecture Mode**: Traditional (fragile) vs Temporal (durable)
 - **Failure Scenario**: Store connectivity (default), payment error, random chaos, or none
 - **Presentation Mode**: Simple (high-level) vs Detailed (retries, payloads, error messages)
-- **Worker Language**: Python, Go, TypeScript, Java, C# (the code view updates to match)
 
 ## Architecture
 
@@ -106,7 +105,7 @@ The same workflow is implemented in five languages. The backend is decoupled fro
 
 All workers implement the same flow: validate → authorize payment → clear cart → submit to store → wait for ready signal → capture payment. Same task queue (`dejavu-tacos`), same signal names, same compensation behavior.
 
-The code view in the UI auto-detects the active worker language. To add a new language, see [Adding a New Language](#adding-a-new-language).
+The code view opens on the active worker's language, with a tab per language to compare them. To add a new language, see [Adding a New Language](#adding-a-new-language).
 
 ## Project Structure
 

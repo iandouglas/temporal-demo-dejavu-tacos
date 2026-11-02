@@ -1,0 +1,53 @@
+/* temporal-tailwind.css: the Temporal tokens as Tailwind 4 utilities.
+   Copied from temporal-toolkit-demo-buildkit (assets/css/temporal-tailwind.css @ e2deb6e)
+   with two blocks left out:
+
+   - The radius reset. The kit zeroes --radius-* with @theme inline so every
+     `rounded-*` utility becomes square. The phone app is a mock restaurant product,
+     not a Temporal screen, and keeps its rounded corners. The Temporal-side UI uses
+     the kit's own classes, which are square already.
+   - The shadcn mapping. This app vendors no component library. */
+
+@import "./temporal-theme.css";
+@import "./temporal-components.css";
+
+:root {
+  --panel:  #181a24;
+  --canvas: #101114;
+}
+
+@theme inline {
+  --font-mono: "Noto Sans Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Palette */
+  --color-space-black: var(--space-black);
+  --color-off-white:   var(--off-white);
+  --color-panel:       var(--panel);
+  --color-canvas:      var(--canvas);
+  --color-border:      var(--border);
+  --color-control-edge: var(--control-edge);
+  --color-t-uv:         var(--uv);
+  --color-t-uv-light:   var(--uv-light);
+  --color-t-indigo:     var(--indigo-200);
+  --color-t-indigo-100: var(--indigo-100);
+  --color-t-indigo-300: var(--indigo-300);
+  --color-t-purple:     var(--purple);
+  --color-t-pink:       var(--pink);
+  --color-t-green:      var(--green);
+  --color-t-green-soft: var(--green-soft);
+  --color-t-lime:       var(--lime);
+  --color-t-yellow:     var(--yellow);
+  --color-t-cyan:       var(--cyan);
+  --color-t-slate:      var(--slate-300);
+  --color-t-slate-dim:  var(--slate-500);
+  --color-t-red:        var(--red);
+
+  /* Status vocabulary (see temporal-components.css). */
+  --color-status-pending:   var(--slate-300);
+  --color-status-active:    var(--cyan);
+  --color-status-waiting:   var(--yellow);
+  --color-status-retrying:  var(--pink);
+  --color-status-completed: var(--green);
+  --color-status-failed:    var(--red);
+  --color-status-skipped:   var(--slate-300);
+}

@@ -24,7 +24,7 @@ On tmprl-demo.cloud you can also crash or stop the Workers in the middle of an o
 
 The catalog runs this demo at https://dejavu-tacos.tmprl-demo.cloud on a Temporal Cloud Namespace, with the Python Worker. The Temporal links in the app open that Namespace in Temporal Cloud.
 
-The shared deployment keeps the **Demo Settings** in the API's memory, so changing them resets the store connection and orders for everyone using it at that moment. For a run of your own, use a crashable environment:
+The shared deployment keeps the **Demo settings** in the API's memory, so changing them resets the store connection and orders for everyone using it at that moment. For a run of your own, use a crashable environment:
 
 1. On the demo's page in the catalog, under **Crashable environment**, press **Create crashable environment** and wait for it to finish creating.
 2. Press **Open environment**. It's a private copy of the demo with its own Task Queue and Workers, and it deletes itself after 1 hour unless you press **Extend +1h**.
@@ -41,45 +41,45 @@ From the repository root:
 
 The script prints a banner with the URLs when everything is up. Press `Ctrl-C` in that terminal to stop everything.
 
-Open http://localhost:5173. A healthy start shows the **Customer App** tab with the phone on the **Déjà Vu Tacos** menu, an **⚡ Temporal** pill next to the gear icon, a **Behind the Scenes** panel, and **The Actual Code** panel on the right with the Workflow file for the running Worker's language. The Temporal UI is at http://localhost:8233.
+Open http://localhost:5173. A healthy start shows the **Customer app** tab with the phone on the **Déjà Vu Tacos** menu, two buttons at the top right: the path the demo is on (**Temporal · Store connectivity**) and **Temporal UI**. Below them are a **Behind the scenes** panel and **The actual code** panel, opened on the tab for the running Worker's language. Drag the edge between two panels to resize them, or use a panel's collapse button to hide it to a rail; the arrangement is remembered per browser. The Temporal UI is at http://localhost:8233.
 
-The **⚡ Temporal** pill opens the Namespace in the Temporal UI. After you place an order, the **⚡ Temporal Workflow** badge at the top of **Behind the Scenes** opens that order's execution.
+**Temporal UI** opens the Namespace in the Temporal UI. After you place an order, **Open execution** at the bottom of **Behind the scenes**, next to the Workflow ID, opens that order's execution.
 
 ## The walkthrough
 
 To place an order on the phone: press **+** next to one or more items, press **View Cart**, then **Proceed to Checkout**, then **Place Order**. The phone switches to **Order Status**. When an order is done, **Order Again** takes you back to the menu.
 
-The demo starts in **Temporal** mode with the **Store Connectivity Failure** scenario, and each new page load starts with the store's cable unplugged. Leave **Presentation Mode** on **Detailed** (the default) to see attempt counts and error messages.
+The demo starts in **Temporal** mode with the **Store connectivity** scenario, and each new page load starts with the store's cable unplugged. Leave **Presentation** on **Detailed** (the default) to see attempt counts and error messages.
 
 ### 1. The store goes offline mid-order
 
 1. Place an order.
-2. **Validate Order**, **Validate Store**, **Authorize Payment** and **Clear Cart** turn green in **Behind the Scenes**. **Submit to Store** turns yellow with "Store connectivity lost — Bob accidentally unplugged the ethernet" and counts up **Attempt 2/10**, **3/10**, with a longer pause each time.
+2. **Validate order**, **Validate store**, **Authorize payment** and **Clear cart** turn green in **Behind the scenes**. **Submit to store** turns pink (retrying), the header badge reads **RETRYING**, and the step counts up **Retry 2 of 10**, **3 of 10** with "Store connectivity lost — Bob accidentally unplugged the ethernet", with a longer pause each time. Its lines in **The actual code** are highlighted in the same colour.
 3. The phone says "Placing your order..." and "This may take a moment longer than usual."
 4. Say: "The payment hold is already on the card, and now the store's system is unreachable. The customer sees a short delay. Behind it, Temporal retries the call to the store."
 
 ### 2. Plug the store back in
 
-1. Switch to the **Kitchen Display** tab. It shows **Connection Lost!** and "Uh oh... Bob accidentally unplugged the ethernet again!"
+1. Switch to the **Kitchen display** tab. It shows **Connection Lost!** and "Uh oh... Bob accidentally unplugged the ethernet again!"
 2. Press **Plug It Back In**. The kitchen display comes online and, within a few seconds, the order appears as a card marked **PREPARING**.
-3. Back on **Customer App**, **Submit to Store** is green and the phone says "The store has your order!".
+3. Back on **Customer app**, **Submit to store** is green with "Succeeded on attempt N", and the phone says "The store has your order!".
 4. Say: "Nobody restarted anything or replayed a message. The next retry found the store online and went through. The Workflow carried on from the step it was on."
-5. For proof, click **⚡ Temporal Workflow**. While it was retrying, the pending Activity showed the attempt count and last error. Once it succeeds, the history records the Activity once, with the attempt number that succeeded.
+5. For proof, click **Open execution**. While it was retrying, the pending Activity showed the attempt count and last error. Once it succeeds, the history records the Activity once, with the attempt number that succeeded.
 
-The order card shows a total of $0.00 when the Worker runs as its own process, which is how `scripts/start.sh` and tmprl-demo.cloud run it. The phone and **Behind the Scenes** show the real total.
+The order card shows a total of $0.00 when the Worker runs as its own process, which is how `scripts/start.sh` and tmprl-demo.cloud run it. The phone and **Behind the scenes** show the real total.
 
 ### 3. The kitchen marks it ready, and only then is the card charged
 
-1. On **Kitchen Display**, press **Mark Ready** on the order card. It changes to **READY** and **✓ Done**.
-2. On **Customer App**, **Await Order Ready** and then **Capture Payment** turn green, and the phone shows **Order Ready!**.
+1. On **Kitchen display**, press **Mark Ready** on the order card. It changes to **READY** and **✓ Done**.
+2. On **Customer app**, **Wait for order ready** (yellow while it waits for the kitchen) and then **Capture payment** turn green, the header badge reads **COMPLETED**, and the phone shows **Order Ready!**.
 3. Say: "The Workflow was waiting for the kitchen. **Mark Ready** sent it a Signal, and only then did it capture the payment. Until that point the customer had a hold, not a charge."
 4. For proof, find the `WorkflowExecutionSignaled` event for `order_ready` in the history, followed by the capture.
 
 ### 4. The store never comes back, so the hold is released
 
-1. Press **Order Again**. On **Kitchen Display**, press **Unplug the Cable Again** (or reload the page, which starts unplugged).
+1. Press **Order Again**. On **Kitchen display**, press **Unplug the Cable Again** (or reload the page, which starts unplugged).
 2. Place an order and don't plug the cable back in.
-3. **Submit to Store** retries up to **Attempt 10/10**, which took about a minute locally. Then a **Compensation (Saga)** branch appears with **Release Payment Hold**, the banner reads "↩ Payment released — customer notified", and the phone shows **Order Couldn't Be Processed**: "Your payment hold has been released. No charges were made."
+3. **Submit to store** retries up to **Retry 10 of 10**, which took about a minute locally, then turns red. A yellow **Compensating** banner appears with **Release payment hold** under it, a **Compensation finished** note reads "Payment hold released and the customer notified", and the phone shows **Order Couldn't Be Processed**: "Your payment hold has been released. No charges were made."
 4. Say: "The store retry has a limit. When it runs out, the Workflow undoes the step that touched the customer's money. That undo was registered before the payment hold was placed, so it runs even if the hold call itself had failed halfway."
 5. For proof, open the execution. It ends **Completed**, not Failed: the Workflow catches the error, compensates, and returns `success: false`. The history shows `release_payment_hold_activity` after the last store attempt.
 
@@ -87,13 +87,13 @@ To cut the wait, start this beat while you talk through beat 3.
 
 ### 5. The same failure, with direct calls
 
-1. Click the gear icon (**Demo Settings**) and pick **Traditional (Direct Calls)** under **Architecture Mode**. The pill changes to **🔗 Traditional**. Changing settings resets the store to unplugged.
+1. Click the path button (**Temporal · Store connectivity**) to open **Demo settings**, and pick **Traditional (direct calls)** under **Architecture**. The button now reads **Traditional · Store connectivity**. Changing settings resets the store to unplugged.
 2. Place an order.
-3. **Submit to Store** fails on the first try and shows **No automatic recovery!**: "Payment hold was placed but the store never received the order." The phone shows **Something Went Wrong**: "Please contact support. Your payment may have been charged." Nothing appears on **Kitchen Display**.
+3. **Submit to store** fails on the first try and **Behind the scenes** shows **No automatic recovery**: "Payment hold was placed but the store never received the order." The phone shows **Something Went Wrong**: "Please contact support. Your payment may have been charged." Nothing appears on **Kitchen display**.
 4. Say: "Same services, same outage. The order code called each service directly. When the store call failed, the code stopped, the hold stayed on the card, and the only way to find it is a support ticket."
-5. The right-hand panel is now **Evolution of "Simple" Architecture**. Press `→` (or `↓`) to step through its 8 stages, from direct HTTP calls through queues, retry logic, a dead letter queue, state management, monitoring and compensation, to "A Rube Goldberg machine." `←` and `↑` go back.
+5. The right-hand panel is now **Traditional architecture**. Press `→` (or `↓`, or the arrow buttons) to step through its 8 stages, from direct HTTP calls through queues, retry logic, a dead letter queue, state management, monitoring and compensation, to "A Rube Goldberg machine." `←` and `↑` go back.
 6. Say: "This is what teams build to get back what the Workflow gave us: retries, state, and the undo step. Every box is something to run and keep working."
-7. Switch back to **Temporal** in **Demo Settings** before the next beat.
+7. Switch back to **Temporal** in **Demo settings** before the next beat.
 
 ### 6. Crash the Workers mid-order (tmprl-demo.cloud)
 
@@ -101,9 +101,9 @@ This beat uses a crashable environment; see [On tmprl-demo.cloud](#on-tmprl-demo
 
 1. In your environment, place an order and leave the cable unplugged so it's retrying.
 2. In the catalog's **Crashable environment** panel, press **Crash workers**. Wait for it to report **Running** again.
-3. Back in the app, plug the cable in on **Kitchen Display**. The order goes through, and **Mark Ready** finishes it.
+3. Back in the app, plug the cable in on **Kitchen display**. The order goes through, and **Mark Ready** finishes it.
 4. Say: "We just killed the processes running this order. The Workflow's state lives in Temporal, not in the Worker, so the replacement Worker picked it up at the store step."
-5. For a stronger version, press **Scale down workers** first. The panel shows **Workers scaled to zero**. Place an order: the phone says "Placing your order..." and nothing in **Behind the Scenes** moves. Press **Scale up workers**, and the order starts as soon as a Worker is polling.
+5. For a stronger version, press **Scale down workers** first. The panel shows **Workers scaled to zero**. Place an order: the phone says "Placing your order..." and nothing in **Behind the scenes** moves. Press **Scale up workers**, and the order starts as soon as a Worker is polling.
 6. Say: "The app accepted the order with no Workers running at all. Temporal held it until there was something to run it."
 
 Locally, the same thing works by stopping and starting the Worker: `docker compose restart worker-python` with Docker, or `Ctrl-C` on the Worker process if you started the services one by one.
@@ -113,9 +113,9 @@ Locally, the same thing works by stopping and starting the Worker: `docker compo
 - **Payment Service Error:** **Authorize Payment** fails three times and the order ends with **We Couldn't Complete Your Order**. No hold was placed, so there's nothing to release and no **Compensation (Saga)** branch appears.
 - **Random Chaos:** any step fails 30% of the time. The outcome changes from run to run, so don't rely on it for a specific beat.
 - **None (Happy Path):** the store is online from the start; the order goes straight to the kitchen.
-- **Worker Language** only changes which file **The Actual Code** shows. It doesn't change the Worker that runs. To run another language locally, pass it to `scripts/start.sh`. tmprl-demo.cloud runs the Python Worker.
+- The language tabs under **The actual code** only change which file it shows, and switching them doesn't reset the order. It doesn't change the Worker that runs. To run another language locally, pass it to `scripts/start.sh`. tmprl-demo.cloud runs the Python Worker.
 
-**The Actual Code** shows a shortened version of the Workflow, not the full file. Use [Show it in code](#show-it-in-code) for the real lines.
+**The actual code** shows a shortened version of the Workflow, not the full file. Use [Show it in code](#show-it-in-code) for the real lines.
 
 ## Show it in code
 
@@ -338,7 +338,7 @@ saga.addCompensation(() -> {
 
 - The Java SDK has a `Saga` class that keeps the undo list and runs it with `saga.compensate()`. Python, TypeScript and .NET keep a list by hand, as in the entries above. Go uses a small `Compensations` type in [`workflows/go/workflows/compensation.go`](https://github.com/temporal-sa/temporal-demo-dejavu-tacos/blob/a64d27b00be3b29f26dd587957de0ae21d755f09/workflows/go/workflows/compensation.go#L12-L49).
 - All five register the release before the payment hold and use the same retry settings for the store call.
-- To show another language's code live, start that Worker locally with `./scripts/start.sh <language>`.
+- For a quick look, click that language's tab under **The actual code**. To run it live, start that Worker locally with `./scripts/start.sh <language>`.
 
 **Docs:** [Saga pattern: implementation](https://docs.temporal.io/design-patterns/saga-pattern#implementation)
 
@@ -353,8 +353,8 @@ When someone asks what they'd change for their own system, these are the parts t
 
 ## Reset and tear down
 
-- **Between orders:** press **Order Again**. To unplug the store again, press **Unplug the Cable Again** on **Kitchen Display**, or reload the page.
-- **Between beats:** changing anything in **Demo Settings** clears the API's orders and store state and unplugs the store. Running Workflows keep running.
+- **Between orders:** press **Order Again**. To unplug the store again, press **Unplug the Cable Again** on **Kitchen display**, or reload the page.
+- **Between beats:** changing anything in **Demo settings** clears the API's orders and store state and unplugs the store. Running Workflows keep running.
 - **Close what's still open:** an order the kitchen never marked ready stays **Running**, waiting for the Signal. Finish it with **Mark Ready**, or terminate it with `temporal workflow terminate --workflow-id order-<id>` or from the Temporal UI. A retrying order ends on its own when the retries run out.
 - **On tmprl-demo.cloud:** press **Delete** in the **Crashable environment** panel when you're done, or let it delete itself after the hour.
 - **To stop locally:** press `Ctrl-C` in the `scripts/start.sh` terminal. It stops the containers or local processes and the dev server.
@@ -363,12 +363,12 @@ When someone asks what they'd change for their own system, these are the parts t
 
 | What you see | Likely cause | Fix |
 |---|---|---|
-| The phone stays on "Placing your order..." and nothing moves in **Behind the Scenes** | No Worker is polling the Task Queue: it's down, scaled to zero, or on a different queue | Start or scale up the Worker. The API and Worker both read `TEMPORAL_TASK_QUEUE` and default to `dejavu-tacos` |
-| The first order goes straight through with no retries | The store was already plugged in for this page, or the scenario isn't **Store Connectivity Failure** | Press **Unplug the Cable Again**, or reload the page, and check **Demo Settings** |
+| The phone stays on "Placing your order..." and nothing moves in **Behind the scenes** | No Worker is polling the Task Queue: it's down, scaled to zero, or on a different queue | Start or scale up the Worker. The API and Worker both read `TEMPORAL_TASK_QUEUE` and default to `dejavu-tacos` |
+| The first order goes straight through with no retries | The store was already plugged in for this page, or the scenario isn't **Store connectivity** | Press **Unplug the Cable Again**, or reload the page, and check **Demo settings** |
 | **Plug It Back In** worked, but the order still retries | The cable state is per page load; the order came from another tab or an earlier load | Plug in from the same tab that placed the order |
-| The order never appears on **Kitchen Display** | It's still retrying, it ran out of retries, or it's a Traditional mode order that failed | Check **Behind the Scenes** |
-| The screen resets in the middle of a beat on the shared deployment | Someone else changed **Demo Settings** | Use a crashable environment |
-| **The Actual Code** shows a different language from the running Worker | **Worker Language** is set by hand in **Demo Settings** | Pick the Worker's language; it's only a display setting |
+| The order never appears on **Kitchen display** | It's still retrying, it ran out of retries, or it's a Traditional mode order that failed | Check **Behind the scenes** |
+| The screen resets in the middle of a beat on the shared deployment | Someone else changed **Demo settings** | Use a crashable environment |
+| **The actual code** shows a different language from the running Worker | Someone clicked another language tab | Click the Worker's language tab; reloading the page also returns to it |
 
 ## Keeping this runbook current
 

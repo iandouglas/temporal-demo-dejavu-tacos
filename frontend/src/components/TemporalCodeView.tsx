@@ -1,41 +1,42 @@
+import { useRef, type KeyboardEvent } from 'react'
+import { PaneCollapseButton } from '../kit/react/PaneLayout'
+import type { Status } from '../kit/react/status'
 import type { OrderEvent, WorkerLanguage } from '../types'
-import { getLanguageDef, type CodeLine, type LanguageDef } from '../data/workflowCode'
+import { WORKFLOW_LANGUAGES, getLanguageDef, type CodeLine, type LanguageDef } from '../data/workflowCode'
+import { stepStatus } from '../lib/stepStatus'
 
 interface Props {
   events: OrderEvent[]
   finalStatus: string | null
   language: WorkerLanguage
+  onLanguageChange: (language: WorkerLanguage) => void
 }
 
-function getStepStatus(step: string, events: OrderEvent[]): string | null {
-  const stepEvents = events.filter((e) => e.step === step)
-  if (stepEvents.length === 0) return null
-  return stepEvents[stepEvents.length - 1].status
+function lineStatus(step: string, events: OrderEvent[]): Status | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i].step === step) return stepStatus(step, events[i].status)
+  }
+  return null
 }
 
 function highlightSyntax(text: string, lang: LanguageDef): string {
-  // Tokenize: find all matches with their positions, apply non-overlapping spans
+  // Non-overlapping tokens, earlier rules win.
   const tokens: { start: number; end: number; className: string }[] = []
 
   for (const rule of lang.highlighting) {
-    // Reset regex state for global patterns
     const re = new RegExp(rule.pattern.source, rule.pattern.flags)
     let match: RegExpExecArray | null
     while ((match = re.exec(text)) !== null) {
       const start = match.index
       const end = start + match[0].length
-      // Only add if it doesn't overlap with existing tokens
-      const overlaps = tokens.some((t) => start < t.end && end > t.start)
-      if (!overlaps) {
+      if (!tokens.some((t) => start < t.end && end > t.start)) {
         tokens.push({ start, end, className: rule.className })
       }
     }
   }
 
-  // Sort by position
   tokens.sort((a, b) => a.start - b.start)
 
-  // Build result string
   let result = ''
   let cursor = 0
   for (const token of tokens) {
@@ -51,125 +52,141 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-export function TemporalCodeView({ events, finalStatus, language }: Props) {
+export function TemporalCodeView({ events, finalStatus, language, onLanguageChange }: Props) {
   const lang = getLanguageDef(language)
-
   const allCode = [...lang.code, ...lang.compensation]
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  // One tab stop for the whole tablist; arrows, Home and End move between languages.
+  const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const i = WORKFLOW_LANGUAGES.findIndex((l) => l.id === language)
+    const last = WORKFLOW_LANGUAGES.length - 1
+    const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: last }[event.key]
+    if (to === undefined) return
+    event.preventDefault()
+    const j = (to + WORKFLOW_LANGUAGES.length) % WORKFLOW_LANGUAGES.length
+    onLanguageChange(WORKFLOW_LANGUAGES[j].id)
+    tabRefs.current[j]?.focus()
+  }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-700">
-        <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider">
-          The Actual Code
-        </h3>
-        <p className="text-xs text-gray-500 mt-0.5">
-          That's it. Temporal handles the rest.
-        </p>
+    <section className="card" aria-label="Workflow code">
+      <div className="card-head">
+        <div>
+          <p className="eyebrow">Workflow code · simplified excerpt</p>
+          <h2 className="heading">The actual code</h2>
+        </div>
+        <PaneCollapseButton />
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        <div className="bg-[#0d1117] rounded-xl border border-gray-700/50 overflow-hidden">
-          {/* File tab */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-[#161b22] border-b border-gray-700/50">
-            <span className="text-[10px] text-gray-500">📄</span>
-            <span className="text-[11px] text-gray-400 font-mono">{lang.filename}</span>
-            <span className="text-[10px] text-gray-600 ml-auto">{lang.label}</span>
-          </div>
-
-          {/* Code */}
-          <div className="p-3 font-mono text-[11px] leading-[1.6]">
-            {allCode.map((line, i) => (
-              <CodeLineRow
-                key={i}
-                line={line}
-                lineNum={i + 1}
-                events={events}
-                lang={lang}
-              />
-            ))}
-          </div>
+      <div className="window flex-1 min-h-0">
+        <div className="window-bar">
+          <span className="window-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="window-title">{lang.filename}</span>
         </div>
-
-        {/* Callout */}
-        <div className="mt-4 text-center">
-          {events.length === 0 && (
-            <p className="text-xs text-gray-500">
-              Place an order to see the code light up as each activity runs
-            </p>
-          )}
-          {events.length > 0 && !finalStatus && (
-            <p className="text-xs text-purple-400">
-              No queues. No retry services. No dead letter queues. No cron jobs.
-            </p>
-          )}
-          {finalStatus === 'completed' && (
-            <p className="text-xs text-green-400 font-medium">
-              ~30 lines of code. Retries, signals, and compensation — all built in.
-            </p>
-          )}
-          {(finalStatus === 'failed' || finalStatus === 'refunded') && (
-            <p className="text-xs text-yellow-400 font-medium">
-              Compensation ran automatically. No manual cleanup needed.
-            </p>
-          )}
+        <pre
+          className="codeview"
+          id="workflow-code"
+          role="tabpanel"
+          tabIndex={0}
+          aria-label={`${lang.filename}, abbreviated`}
+        >
+          {allCode.map((line, i) => (
+            <CodeLineRow key={i} line={line} events={events} lang={lang} />
+          ))}
+        </pre>
+        <div className="code-tabs" role="tablist" aria-label="SDK language" onKeyDown={onTabKey}>
+          {WORKFLOW_LANGUAGES.map((l, i) => (
+            <button
+              key={l.id}
+              ref={(el) => {
+                tabRefs.current[i] = el
+              }}
+              type="button"
+              role="tab"
+              aria-selected={l.id === language}
+              aria-controls="workflow-code"
+              tabIndex={l.id === language ? 0 : -1}
+              onClick={() => onLanguageChange(l.id)}
+            >
+              {l.label}
+            </button>
+          ))}
         </div>
       </div>
-    </div>
+
+      <Callout events={events} finalStatus={finalStatus} />
+    </section>
+  )
+}
+
+function Callout({ events, finalStatus }: { events: OrderEvent[]; finalStatus: string | null }) {
+  if (events.length === 0) {
+    return (
+      <aside className="callout">
+        <p className="eyebrow">Try it</p>
+        <p>Place an order on the phone and watch each line light up as its step runs.</p>
+      </aside>
+    )
+  }
+  if (finalStatus === 'completed') {
+    return (
+      <aside className="callout" data-status="completed">
+        <p className="eyebrow">That's the whole Workflow</p>
+        <p>About 30 lines. Retries, the kitchen's Signal and compensation are all built in.</p>
+      </aside>
+    )
+  }
+  if (finalStatus === 'failed' || finalStatus === 'refunded') {
+    return (
+      <aside className="callout">
+        <p className="eyebrow">Compensation ran</p>
+        <p>The Saga released the payment hold on its own. Nobody had to clean up by hand.</p>
+      </aside>
+    )
+  }
+  return (
+    <aside className="callout">
+      <p className="eyebrow">Behind every line</p>
+      <p>No queues, no retry service, no dead letter queue, no cron jobs.</p>
+    </aside>
   )
 }
 
 function CodeLineRow({
   line,
-  lineNum,
   events,
   lang,
 }: {
   line: CodeLine
-  lineNum: number
   events: OrderEvent[]
   lang: LanguageDef
 }) {
   if (line.isBlank) {
-    return <div className="h-[1.6em]" />
+    return <span className="ln blank" />
   }
 
-  const stepStatus = line.step ? getStepStatus(line.step, events) : null
-
-  let bgClass = ''
-  let borderClass = 'border-l-2 border-transparent'
-  if (stepStatus === 'running') {
-    bgClass = 'bg-blue-500/10'
-    borderClass = 'border-l-2 border-blue-500'
-  } else if (stepStatus === 'retrying') {
-    bgClass = 'bg-yellow-500/10 animate-pulse'
-    borderClass = 'border-l-2 border-yellow-500'
-  } else if (stepStatus === 'failed') {
-    bgClass = 'bg-red-500/10'
-    borderClass = 'border-l-2 border-red-500'
-  } else if (stepStatus === 'completed') {
-    bgClass = 'bg-green-500/5'
-    borderClass = 'border-l-2 border-green-500/50'
-  }
+  const status = line.step ? lineStatus(line.step, events) : null
+  const classes = ['ln']
+  if (status && status !== 'pending') classes.push(status === 'completed' ? 'done' : 'hl')
 
   const indent = '  '.repeat(line.indent)
-  let textClass = 'text-gray-300'
-  if (line.isComment) textClass = 'text-gray-500 italic'
-  if (line.isDecorator) textClass = 'text-yellow-400'
-
-  const highlighted =
-    line.isComment || line.isDecorator
-      ? line.text
-      : highlightSyntax(line.text, lang)
+  const html =
+    line.isComment
+      ? `<span class="c">${escapeHtml(line.text)}</span>`
+      : line.isDecorator
+        ? `<span class="k">${escapeHtml(line.text)}</span>`
+        : highlightSyntax(line.text, lang)
 
   return (
-    <div className={`px-2 -mx-1 rounded-sm transition-all duration-300 whitespace-pre ${bgClass} ${borderClass}`}>
-      <span className="text-gray-600 select-none w-6 inline-block text-right mr-3">
-        {lineNum}
-      </span>
-      <span
-        className={textClass}
-        dangerouslySetInnerHTML={{ __html: `${indent}${highlighted}` }}
-      />
-    </div>
+    <span
+      className={classes.join(' ')}
+      data-status={status ?? undefined}
+      dangerouslySetInnerHTML={{ __html: `${indent}${html}` }}
+    />
   )
 }
