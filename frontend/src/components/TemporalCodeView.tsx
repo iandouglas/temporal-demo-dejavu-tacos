@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { PaneCollapseButton } from '../kit/react/PaneLayout'
 import type { Status } from '../kit/react/status'
 import type { OrderEvent, WorkerLanguage } from '../types'
@@ -16,6 +16,9 @@ function lineStatus(step: string, events: OrderEvent[]): Status | null {
   for (let i = events.length - 1; i >= 0; i--) {
     if (events[i].step === step) return stepStatus(step, events[i].status)
   }
+  // The wait on the kitchen's Signal sends no event of its own: the Workflow is
+  // parked on it from the moment the store accepts the order until the Signal lands.
+  if (step === 'order_ready' && lineStatus('submit_to_store', events) === 'completed') return 'waiting'
   return null
 }
 
@@ -56,6 +59,12 @@ export function TemporalCodeView({ events, finalStatus, language, onLanguageChan
   const lang = getLanguageDef(language)
   const allCode = [...lang.code, ...lang.compensation]
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const preRef = useRef<HTMLPreElement>(null)
+
+  // Keep the live line on screen: the wait on the kitchen's Signal sits below the fold.
+  useEffect(() => {
+    preRef.current?.querySelector('.ln.hl')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [events.length, language])
 
   // One tab stop for the whole tablist; arrows, Home and End move between languages.
   const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -89,6 +98,7 @@ export function TemporalCodeView({ events, finalStatus, language, onLanguageChan
           <span className="window-title">{lang.filename}</span>
         </div>
         <pre
+          ref={preRef}
           className="codeview"
           id="workflow-code"
           role="tabpanel"
