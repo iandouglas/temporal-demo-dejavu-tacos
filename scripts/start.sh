@@ -3,7 +3,7 @@ set -e
 
 # Déjà Vu Tacos — Demo Launcher
 # Usage: ./scripts/start.sh [language]
-#   language: python (default), go, typescript, java, dotnet
+#   language: python (default), go, typescript, java, dotnet, rust, php, ruby
 #
 # Prefers Docker for backend/worker/frontend.
 # Falls back to running everything locally if Docker isn't available.
@@ -59,8 +59,20 @@ case "$LANG" in
     WORKER_CMD="cd $ROOT_DIR/workflows/dotnet && DEJAVU_BACKEND_URL=http://localhost:8000 dotnet run -c Release"
     WORKER_LABEL=".NET"
     ;;
+  rust)
+    WORKER_CMD="cd $ROOT_DIR/workflows/rust && DEJAVU_BACKEND_URL=http://localhost:8000 cargo run --release"
+    WORKER_LABEL="Rust"
+    ;;
+  php)
+    WORKER_CMD="cd $ROOT_DIR/workflows/php && composer install --quiet && DEJAVU_BACKEND_URL=http://localhost:8000 rr serve -c .rr.yaml"
+    WORKER_LABEL="PHP"
+    ;;
+  ruby)
+    WORKER_CMD="cd $ROOT_DIR/workflows/ruby && bundle install --quiet && DEJAVU_BACKEND_URL=http://localhost:8000 bundle exec ruby worker.rb"
+    WORKER_LABEL="Ruby"
+    ;;
   *)
-    echo "Unknown language: $LANG (supported: python, go, typescript, java, dotnet)"
+    echo "Unknown language: $LANG (supported: python, go, typescript, java, dotnet, rust, php, ruby)"
     exit 1
     ;;
 esac

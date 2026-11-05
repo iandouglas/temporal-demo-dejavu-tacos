@@ -16,6 +16,9 @@ Toggle between **Traditional mode** (direct service calls, no recovery) and **Te
 ./scripts/start.sh typescript   # TypeScript worker
 ./scripts/start.sh java         # Java worker
 ./scripts/start.sh dotnet       # .NET (C#) worker
+./scripts/start.sh rust         # Rust worker
+./scripts/start.sh php          # PHP worker
+./scripts/start.sh ruby         # Ruby worker
 ```
 
 The script auto-detects your environment:
@@ -84,7 +87,7 @@ FastAPI Backend (Python)
            ↕
 Temporal Dev Server (CLI, on host)
            ↕
-Worker (Python, Go, TypeScript, Java, or .NET — swappable)
+Worker (Python, Go, TypeScript, Java, .NET, Rust, PHP, or Ruby — swappable)
     ├── OrderWorkflow (saga compensation, signals, queries)
     └── Activities → Backend internal API
 ```
@@ -93,7 +96,7 @@ The worker runs as a separate process from the backend. Activities call the back
 
 ## Multi-Language Support
 
-The same workflow is implemented in five languages. The backend is decoupled from the worker — it starts workflows and sends signals by string name, so any language's worker can be swapped in.
+The same workflow is implemented in all eight languages with a Temporal SDK. The backend is decoupled from the worker: it starts workflows and sends signals by string name, so any language's worker can be swapped in.
 
 | Language | Run with | Saga Pattern |
 |---|---|---|
@@ -102,6 +105,9 @@ The same workflow is implemented in five languages. The backend is decoupled fro
 | TypeScript | `./scripts/start.sh typescript` | Manual compensation list + `CancellationScope.nonCancellable()` |
 | Java | `./scripts/start.sh java` | SDK's built-in `Saga` class (first-class support) |
 | .NET (C#) | `./scripts/start.sh dotnet` | Manual compensation list with try/catch |
+| Rust | `./scripts/start.sh rust` | Manual compensation list + detached `WorkflowCancellationToken` |
+| PHP | `./scripts/start.sh php` | SDK's built-in `Saga` class, run by RoadRunner |
+| Ruby | `./scripts/start.sh ruby` | Manual compensation list + detached `Cancellation` |
 
 All workers implement the same flow: validate → authorize payment → clear cart → submit to store → wait for ready signal → capture payment. Same task queue (`dejavu-tacos`), same signal names, same compensation behavior.
 
@@ -118,7 +124,10 @@ The code view opens on the active worker's language, with a tab per language to 
 │   ├── go/               # Go worker — go.temporal.io/sdk
 │   ├── typescript/       # TypeScript worker — @temporalio/* packages
 │   ├── java/             # Java worker — io.temporal:temporal-sdk
-│   └── dotnet/           # .NET worker — Temporalio NuGet package
+│   ├── dotnet/           # .NET worker — Temporalio NuGet package
+│   ├── rust/             # Rust worker — temporalio-sdk crate
+│   ├── php/              # PHP worker — temporal/sdk on RoadRunner
+│   └── ruby/             # Ruby worker — temporalio gem
 ├── docker/               # Dockerfiles + nginx config
 ├── docker-compose.yml    # Container orchestration (one profile per language)
 └── scripts/start.sh      # One-command launcher
@@ -134,7 +143,7 @@ DEJAVU_WORKER_LANGUAGE=go docker compose --profile go up --build
 ./scripts/start.sh typescript
 ```
 
-Docker Compose profiles: `python`, `go`, `typescript`, `java`, `dotnet`. Only the selected worker starts.
+Docker Compose profiles: `python`, `go`, `typescript`, `java`, `dotnet`, `rust`, `php`, `ruby`. Only the selected worker starts.
 
 ## Running Locally
 
@@ -146,6 +155,9 @@ The launch script falls back to local mode if Docker isn't available:
 ./scripts/start.sh typescript   # needs: node/npm, temporal
 ./scripts/start.sh java         # needs: gradle, jdk 17+, npm, temporal
 ./scripts/start.sh dotnet       # needs: dotnet 8+, npm, temporal
+./scripts/start.sh rust         # needs: rust 1.92+, protoc, npm, temporal
+./scripts/start.sh php          # needs: php 8.4+ with sockets, composer, rr, npm, temporal
+./scripts/start.sh ruby         # needs: ruby 3.4, bundler, npm, temporal
 ```
 
 ## Development
@@ -162,6 +174,9 @@ cd workflows/go && DEJAVU_BACKEND_URL=http://localhost:8000 go run ./cmd/worker/
 cd workflows/typescript && npm run build && DEJAVU_BACKEND_URL=http://localhost:8000 node lib/worker.js
 cd workflows/java && DEJAVU_BACKEND_URL=http://localhost:8000 gradle run
 cd workflows/dotnet && DEJAVU_BACKEND_URL=http://localhost:8000 dotnet run
+cd workflows/rust && DEJAVU_BACKEND_URL=http://localhost:8000 cargo run --release
+cd workflows/php && composer install && DEJAVU_BACKEND_URL=http://localhost:8000 rr serve -c .rr.yaml
+cd workflows/ruby && bundle install && DEJAVU_BACKEND_URL=http://localhost:8000 bundle exec ruby worker.rb
 cd frontend && npm run dev                                                       # Vite on :5173
 ```
 

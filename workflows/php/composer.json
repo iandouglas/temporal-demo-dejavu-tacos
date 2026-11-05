@@ -1,0 +1,20 @@
+{
+  "name": "dejavu/worker",
+  "description": "Déjà Vu Tacos Temporal Worker",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "ext-sockets": "*",
+    "symfony/http-client": "^7.0",
+    "temporal/sdk": "2.20.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Dejavu\\": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

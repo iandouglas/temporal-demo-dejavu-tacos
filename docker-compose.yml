@@ -3,6 +3,7 @@
 #
 # Then: docker compose --profile python up --build
 # Or:   docker compose --profile go up --build
+# Profiles: python, go, typescript, java, dotnet, rust, php, ruby
 
 services:
   # ── Backend API (FastAPI) ──
@@ -103,6 +104,54 @@ services:
         condition: service_healthy
     profiles:
       - dotnet
+
+  # ── Worker (Rust) ──
+  worker-rust:
+    build:
+      context: .
+      dockerfile: docker/worker-rust.Dockerfile
+    environment:
+      - TEMPORAL_ADDRESS=host.docker.internal:7233
+      - DEJAVU_BACKEND_URL=http://backend:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      backend:
+        condition: service_healthy
+    profiles:
+      - rust
+
+  # ── Worker (PHP) ──
+  worker-php:
+    build:
+      context: .
+      dockerfile: docker/worker-php.Dockerfile
+    environment:
+      - TEMPORAL_ADDRESS=host.docker.internal:7233
+      - DEJAVU_BACKEND_URL=http://backend:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      backend:
+        condition: service_healthy
+    profiles:
+      - php
+
+  # ── Worker (Ruby) ──
+  worker-ruby:
+    build:
+      context: .
+      dockerfile: docker/worker-ruby.Dockerfile
+    environment:
+      - TEMPORAL_ADDRESS=host.docker.internal:7233
+      - DEJAVU_BACKEND_URL=http://backend:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      backend:
+        condition: service_healthy
+    profiles:
+      - ruby
 
   # ── Frontend (nginx + static build) ──
   frontend:

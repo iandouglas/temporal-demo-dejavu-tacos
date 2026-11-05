@@ -10,3 +10,5 @@ temporal.db
 docs/
 *.md
 !README.md
+workflows/rust/target
+workflows/php/vendor

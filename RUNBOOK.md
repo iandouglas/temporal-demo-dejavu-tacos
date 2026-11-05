@@ -36,7 +36,7 @@ From the repository root:
 
 ```bash
 ./scripts/start.sh            # Python Worker (default)
-./scripts/start.sh go         # or: typescript, java, dotnet
+./scripts/start.sh go         # or: typescript, java, dotnet, rust, php, ruby
 ```
 
 The script prints a banner with the URLs when everything is up. Press `Ctrl-C` in that terminal to stop everything.
@@ -121,7 +121,7 @@ Locally, the same thing works by stopping and starting the Worker: `docker compo
 
 All links point at commit [`a64d27b`](https://github.com/temporal-sa/temporal-demo-dejavu-tacos/commit/a64d27b00be3b29f26dd587957de0ae21d755f09). Open a file locally with `code -g <path>:<line>`.
 
-The entries use the Python Worker, which is what tmprl-demo.cloud runs. The other four languages implement the same Workflow with the same Activity names, Task Queue and Signal.
+The entries use the Python Worker, which is what tmprl-demo.cloud runs. The other seven languages implement the same Workflow with the same Task Queue and Signal. Activity names follow each language's conventions.
 
 ### Retry the store until it comes back
 
@@ -282,7 +282,7 @@ if config.settings.mode == ArchitectureMode.TEMPORAL:
 **What you need to understand:**
 
 - `wait_condition` blocks until the Signal handler sets the flag. The Workflow uses no Worker resources while it waits, and the wait survives Worker restarts.
-- The API sends the Signal by Workflow ID and Signal name, so it doesn't import the Workflow code. That's how one API works with Workers in five languages.
+- The API sends the Signal by Workflow ID and Signal name, so it doesn't import the Workflow code. That's how one API works with Workers in eight languages.
 - There's no timeout on this wait. An order the kitchen never marks ready stays open. A production version would pass `timeout=` and release the hold when it expires.
 - The `get_status` Query on the same class returns the current step, if someone asks how another service would read the order's state.
 
@@ -336,8 +336,8 @@ saga.addCompensation(() -> {
 
 **What you need to understand:**
 
-- The Java SDK has a `Saga` class that keeps the undo list and runs it with `saga.compensate()`. Python, TypeScript and .NET keep a list by hand, as in the entries above. Go uses a small `Compensations` type in [`workflows/go/workflows/compensation.go`](https://github.com/temporal-sa/temporal-demo-dejavu-tacos/blob/a64d27b00be3b29f26dd587957de0ae21d755f09/workflows/go/workflows/compensation.go#L12-L49).
-- All five register the release before the payment hold and use the same retry settings for the store call.
+- The Java and PHP SDKs have a `Saga` class that keeps the undo list and runs it with `compensate()`. Python, TypeScript, .NET, Rust and Ruby keep a list by hand, as in the entries above. Go uses a small `Compensations` type in [`workflows/go/workflows/compensation.go`](https://github.com/temporal-sa/temporal-demo-dejavu-tacos/blob/a64d27b00be3b29f26dd587957de0ae21d755f09/workflows/go/workflows/compensation.go#L12-L49).
+- All eight register the release before the payment hold and use the same retry settings for the store call.
 - For a quick look, click that language's tab under **The actual code**. To run it live, start that Worker locally with `./scripts/start.sh <language>`.
 
 **Docs:** [Saga pattern: implementation](https://docs.temporal.io/design-patterns/saga-pattern#implementation)
