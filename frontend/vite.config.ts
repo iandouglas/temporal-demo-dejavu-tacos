@@ -8,7 +8,7 @@ export default defineConfig({
     // The walkthrough container calls this dev server as host.docker.internal.
     allowedHosts: true,
     proxy: {
-      '/api': 'http://localhost:8000',
+      '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:8000',
     },
   },
 })
