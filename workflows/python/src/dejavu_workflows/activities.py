@@ -71,6 +71,8 @@ async def _emit_event(
         )
 
 MODE = ArchitectureMode.TEMPORAL
+# Matches DEFAULT_RETRY in order_workflow.py, for the "Retry 1 of 3" the UI shows.
+DEFAULT_MAX_ATTEMPTS = 3
 
 
 @activity.defn
@@ -95,6 +97,7 @@ async def validate_order_activity(order_input: dict) -> dict:
             StepStatus.RETRYING,
             mode=MODE,
             attempt=info.attempt,
+            max_attempts=DEFAULT_MAX_ATTEMPTS,
             error=str(e),
         )
         raise
@@ -122,6 +125,7 @@ async def validate_store_activity(order_input: dict) -> dict:
             StepStatus.RETRYING,
             mode=MODE,
             attempt=info.attempt,
+            max_attempts=DEFAULT_MAX_ATTEMPTS,
             error=str(e),
         )
         raise
@@ -154,6 +158,7 @@ async def authorize_payment_activity(order_input: dict) -> dict:
             StepStatus.RETRYING,
             mode=MODE,
             attempt=info.attempt,
+            max_attempts=DEFAULT_MAX_ATTEMPTS,
             error=str(e),
         )
         raise
