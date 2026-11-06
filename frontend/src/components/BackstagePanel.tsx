@@ -1,6 +1,6 @@
 import { BackstagePanel as KitBackstagePanel } from '../kit/react/BackstagePanel'
 import { StepList, type Step } from '../kit/react/StepList'
-import { stepStatus } from '../lib/stepStatus'
+import { orderStepStatus, stepStatus } from '../lib/stepStatus'
 import type { OrderEvent, Settings } from '../types'
 
 interface BackstagePanelProps {
@@ -39,9 +39,9 @@ function lastEvent(stepKey: string, events: OrderEvent[]): OrderEvent | undefine
   return undefined
 }
 
-function toStep(def: StepDef, events: OrderEvent[], detailed: boolean): Step {
+function toStep(def: StepDef, events: OrderEvent[], detailed: boolean, isTemporal: boolean): Step {
   const last = lastEvent(def.key, events)
-  const status = stepStatus(def.key, last?.status)
+  const status = isTemporal ? orderStepStatus(def.key, events) : stepStatus(def.key, last?.status)
 
   let note: string | undefined
   if (last && status === 'retrying') {
@@ -72,9 +72,9 @@ export function BackstagePanel({
   const isDetailed = settings.presentation_mode === 'detailed'
   const isTemporal = settings.mode === 'temporal'
 
-  const steps = events.length === 0 ? [] : WORKFLOW_STEPS.map((s) => toStep(s, events, isDetailed))
+  const steps = events.length === 0 ? [] : WORKFLOW_STEPS.map((s) => toStep(s, events, isDetailed, isTemporal))
   const compensation = COMPENSATION_STEPS.filter((s) => lastEvent(s.key, events)).map((s) =>
-    toStep(s, events, isDetailed),
+    toStep(s, events, isDetailed, isTemporal),
   )
 
   const storeFailed =

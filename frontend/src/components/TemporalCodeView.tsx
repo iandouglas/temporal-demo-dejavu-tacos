@@ -3,7 +3,7 @@ import { PaneCollapseButton } from '../kit/react/PaneLayout'
 import type { Status } from '../kit/react/status'
 import type { OrderEvent, WorkerLanguage } from '../types'
 import { WORKFLOW_LANGUAGES, getLanguageDef, type CodeLine, type LanguageDef } from '../data/workflowCode'
-import { stepStatus } from '../lib/stepStatus'
+import { orderStepStatus } from '../lib/stepStatus'
 
 interface Props {
   events: OrderEvent[]
@@ -13,13 +13,8 @@ interface Props {
 }
 
 function lineStatus(step: string, events: OrderEvent[]): Status | null {
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i].step === step) return stepStatus(step, events[i].status)
-  }
-  // The wait on the kitchen's Signal sends no event of its own: the Workflow is
-  // parked on it from the moment the store accepts the order until the Signal lands.
-  if (step === 'order_ready' && lineStatus('submit_to_store', events) === 'completed') return 'waiting'
-  return null
+  const status = orderStepStatus(step, events)
+  return status === 'pending' ? null : status
 }
 
 function highlightSyntax(text: string, lang: LanguageDef): string {
@@ -129,12 +124,20 @@ export function TemporalCodeView({ events, finalStatus, language, onLanguageChan
         </div>
       </div>
 
-      <Callout events={events} finalStatus={finalStatus} />
+      <Callout events={events} finalStatus={finalStatus} lineCount={allCode.filter((line) => !line.isBlank).length} />
     </section>
   )
 }
 
-function Callout({ events, finalStatus }: { events: OrderEvent[]; finalStatus: string | null }) {
+function Callout({
+  events,
+  finalStatus,
+  lineCount,
+}: {
+  events: OrderEvent[]
+  finalStatus: string | null
+  lineCount: number
+}) {
   if (events.length === 0) {
     return (
       <aside className="callout">
@@ -147,7 +150,7 @@ function Callout({ events, finalStatus }: { events: OrderEvent[]; finalStatus: s
     return (
       <aside className="callout" data-status="completed">
         <p className="eyebrow">That's the whole Workflow</p>
-        <p>About 30 lines. Retries, the kitchen's Signal and compensation are all built in.</p>
+        <p>About {Math.round(lineCount / 10) * 10} lines. Retries, the kitchen's Signal and compensation are all built in.</p>
       </aside>
     )
   }
