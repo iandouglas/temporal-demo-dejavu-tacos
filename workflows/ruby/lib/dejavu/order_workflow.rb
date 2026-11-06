@@ -18,6 +18,7 @@ module Dejavu
     RetryPolicy = Temporalio::RetryPolicy
 
     DEFAULT_RETRY = RetryPolicy.new(max_attempts: 3)
+    KITCHEN_WAIT_TIMEOUT = 3600
 
     def initialize
       @order_ready = false
@@ -74,7 +75,13 @@ module Dejavu
 
         # Human in the loop: the kitchen sends the order_ready Signal.
         @status = 'preparing'
-        Workflow.wait_condition { @order_ready }
+        begin
+          Workflow.timeout(KITCHEN_WAIT_TIMEOUT) { Workflow.wait_condition { @order_ready } }
+        rescue Timeout::Error
+          # No word from the kitchen: complete the order anyway so the
+          # Workflow doesn't stay open.
+          Workflow.logger.info("Order #{order['order_id']} auto-completed")
+        end
 
         @status = 'capturing_payment'
         Workflow.execute_activity(Activities::CapturePayment,

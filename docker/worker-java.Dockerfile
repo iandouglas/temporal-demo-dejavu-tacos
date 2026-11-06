@@ -3,6 +3,6 @@ WORKDIR /app
 COPY workflows/java/ .
 RUN gradle installDist --no-daemon
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre
 COPY --from=build /app/build/install/worker /app
 CMD ["/app/bin/worker"]

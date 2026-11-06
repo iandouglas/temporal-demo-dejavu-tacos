@@ -22,6 +22,8 @@ use Temporal\Workflow\WorkflowMethod;
 #[WorkflowInterface]
 class OrderWorkflow
 {
+    private const KITCHEN_WAIT_TIMEOUT_SECONDS = 3600;
+
     private bool $orderReady = false;
     private string $status = 'pending';
 
@@ -83,9 +85,10 @@ class OrderWorkflow
             $this->status = 'submitting_to_store';
             yield $submitActs->submitToStore($order);
 
-            // Human in the loop: the kitchen sends the order_ready Signal.
+            // Human in the loop: the kitchen sends the order_ready Signal. With no
+            // word from the kitchen, the order completes anyway when the wait times out.
             $this->status = 'preparing';
-            yield Workflow::await(fn () => $this->orderReady);
+            yield Workflow::awaitWithTimeout(self::KITCHEN_WAIT_TIMEOUT_SECONDS, fn () => $this->orderReady);
 
             $this->status = 'capturing_payment';
             yield $acts(15)->capturePayment([...$order, 'authorization_id' => $authorizationId]);

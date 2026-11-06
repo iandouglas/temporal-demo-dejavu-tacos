@@ -12,6 +12,9 @@ import (
 // DefaultTaskQueue is used when TEMPORAL_TASK_QUEUE is not set.
 const DefaultTaskQueue = "dejavu-tacos"
 
+// KitchenWaitTimeout is how long an order waits for the kitchen before it completes anyway.
+const KitchenWaitTimeout = time.Hour
+
 // OrderWorkflow orchestrates the order processing pipeline.
 // Registered as "OrderWorkflow" to match the Python backend's string-based start.
 func OrderWorkflow(ctx workflow.Context, orderInput map[string]interface{}) (result map[string]interface{}, err error) {
@@ -121,7 +124,7 @@ func OrderWorkflow(ctx workflow.Context, orderInput map[string]interface{}) (res
 
 	// Step 6: Wait for order ready signal (human in the loop)
 	status = "preparing"
-	if err = workflow.Await(ctx, func() bool { return orderReady }); err != nil {
+	if _, err = workflow.AwaitWithTimeout(ctx, KitchenWaitTimeout, func() bool { return orderReady }); err != nil {
 		return
 	}
 

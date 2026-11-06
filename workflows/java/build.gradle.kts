@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     implementation("io.temporal:temporal-sdk:1.27.0")
-    implementation("com.google.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.11.0")
 }
 
 java {

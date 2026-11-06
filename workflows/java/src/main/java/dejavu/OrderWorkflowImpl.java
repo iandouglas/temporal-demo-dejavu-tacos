@@ -21,6 +21,8 @@ import java.util.Map;
  */
 public class OrderWorkflowImpl implements OrderWorkflow {
 
+    private static final Duration KITCHEN_WAIT_TIMEOUT = Duration.ofHours(1);
+
     private boolean orderReady = false;
     private String status = "pending";
 
@@ -134,9 +136,10 @@ public class OrderWorkflowImpl implements OrderWorkflow {
             status = "submitting_to_store";
             submitActs.submitToStore(input);
 
-            // Step 6: Wait for order ready signal (human in the loop)
+            // Step 6: Wait for order ready signal (human in the loop). With no word
+            // from the kitchen, the order completes anyway when the wait times out.
             status = "preparing";
-            Workflow.await(() -> orderReady);
+            Workflow.await(KITCHEN_WAIT_TIMEOUT, () -> orderReady);
 
             // Step 7: Capture Payment
             status = "capturing_payment";

@@ -19,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
     )
 
 DEFAULT_RETRY = RetryPolicy(maximum_attempts=3)
+KITCHEN_WAIT_TIMEOUT = timedelta(hours=1)
 
 
 @workflow.defn
@@ -119,7 +120,14 @@ class OrderWorkflow:
 
             # Step 6: Wait for order ready signal (human in the loop)
             self._status = "preparing"
-            await workflow.wait_condition(lambda: self._order_ready)
+            try:
+                await workflow.wait_condition(
+                    lambda: self._order_ready, timeout=KITCHEN_WAIT_TIMEOUT
+                )
+            except asyncio.TimeoutError:
+                # No word from the kitchen: complete the order anyway so the
+                # Workflow doesn't stay open.
+                workflow.logger.info(f"Order {order_id} auto-completed")
 
             # Step 7: Capture Payment (only after store confirms)
             self._status = "capturing_payment"

@@ -30,6 +30,8 @@ pub struct OrderResult {
     pub error: Option<String>,
 }
 
+const KITCHEN_WAIT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
+
 fn activity_options(start_to_close_seconds: u64) -> ActivityOptions {
     ActivityOptions::with_start_to_close_timeout(Duration::from_secs(start_to_close_seconds))
         .retry_policy(RetryPolicy::builder().maximum_attempts(3).build())
@@ -172,9 +174,13 @@ impl OrderWorkflow {
         )
         .await?;
 
-        // Human in the loop: the kitchen sends the order_ready Signal.
+        // Human in the loop: the kitchen sends the order_ready Signal. With no
+        // word from the kitchen, the order completes anyway when the timer fires.
         ctx.state_mut(|s| s.status = "preparing".to_string());
-        ctx.wait_condition(|s| s.order_ready).await?;
+        temporalio_sdk::workflows::select! {
+            ready = ctx.wait_condition(|s: &Self| s.order_ready) => ready?,
+            _ = ctx.timer(KITCHEN_WAIT_TIMEOUT) => {}
+        }
 
         ctx.state_mut(|s| s.status = "capturing_payment".to_string());
         let capture_input = OrderInput {

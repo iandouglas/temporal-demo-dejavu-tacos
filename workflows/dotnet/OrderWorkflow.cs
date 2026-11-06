@@ -12,6 +12,8 @@ namespace DejaVu;
 [Workflow("OrderWorkflow")]
 public class OrderWorkflow
 {
+    private static readonly TimeSpan KitchenWaitTimeout = TimeSpan.FromHours(1);
+
     private bool _orderReady;
     private string _status = "pending";
 
@@ -112,9 +114,10 @@ public class OrderWorkflow
             await Workflow.ExecuteActivityAsync(
                 (OrderActivities a) => a.SubmitToStore(input), submitOptions);
 
-            // Step 6: Wait for order ready signal (human in the loop)
+            // Step 6: Wait for order ready signal (human in the loop). With no word
+            // from the kitchen, the order completes anyway when the wait times out.
             _status = "preparing";
-            await Workflow.WaitConditionAsync(() => _orderReady);
+            await Workflow.WaitConditionAsync(() => _orderReady, KitchenWaitTimeout);
 
             // Step 7: Capture Payment (only after store confirms)
             _status = "capturing_payment";

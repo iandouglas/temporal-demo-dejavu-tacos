@@ -10,7 +10,7 @@ The demo makes three problems visible:
 
 - **The store goes offline after the payment hold is placed.** With direct calls, the order fails, the hold stays on the customer's card, and nobody finds out. With a Workflow, the store call retries until the cable is plugged back in, and the order goes through. Beats 1, 2 and 5 show it.
 - **The store never comes back.** The Workflow stops retrying and releases the payment hold on its own. Beat 4 shows it.
-- **The money should move only after the kitchen confirms the order.** The Workflow waits for the kitchen's "ready" Signal before it captures the payment. Beat 3 shows it.
+- **The money should move only after the kitchen confirms the order.** The Workflow waits for the kitchen's "ready" Signal before it captures the payment. Beat 3 shows it. If the Signal doesn't arrive within an hour, the order completes anyway so the Workflow doesn't stay open.
 
 On tmprl-demo.cloud you can also crash or stop the Workers in the middle of an order and watch it carry on when they're back (beat 6).
 
@@ -259,7 +259,14 @@ def order_ready(self) -> None:
 ```python
 # Step 6: Wait for order ready signal (human in the loop)
 self._status = "preparing"
-await workflow.wait_condition(lambda: self._order_ready)
+try:
+    await workflow.wait_condition(
+        lambda: self._order_ready, timeout=KITCHEN_WAIT_TIMEOUT
+    )
+except asyncio.TimeoutError:
+    # No word from the kitchen: complete the order anyway so the
+    # Workflow doesn't stay open.
+    workflow.logger.info(f"Order {order_id} auto-completed")
 
 # Step 7: Capture Payment (only after store confirms)
 self._status = "capturing_payment"
@@ -283,7 +290,7 @@ if config.settings.mode == ArchitectureMode.TEMPORAL:
 
 - `wait_condition` blocks until the Signal handler sets the flag. The Workflow uses no Worker resources while it waits, and the wait survives Worker restarts.
 - The API sends the Signal by Workflow ID and Signal name, so it doesn't import the Workflow code. That's how one API works with Workers in eight languages.
-- There's no timeout on this wait. An order the kitchen never marks ready stays open. A production version would pass `timeout=` and release the hold when it expires.
+- The wait times out after one hour and the order completes as if the kitchen had marked it ready, capturing the payment. That keeps abandoned demo orders from staying open. A production version would more likely release the hold on timeout.
 - The `get_status` Query on the same class returns the current step, if someone asks how another service would read the order's state.
 
 **Docs:** [Python: Signals and Queries](https://docs.temporal.io/develop/python/message-passing), [Approval pattern](https://docs.temporal.io/design-patterns/approval)
@@ -355,7 +362,7 @@ When someone asks what they'd change for their own system, these are the parts t
 
 - **Between orders:** press **Order Again**. To unplug the store again, press **Unplug the Cable Again** on **Kitchen display**, or reload the page.
 - **Between beats:** changing anything in **Demo settings** clears the API's orders and store state and unplugs the store. Running Workflows keep running.
-- **Close what's still open:** an order the kitchen never marked ready stays **Running**, waiting for the Signal. Finish it with **Mark Ready**, or terminate it with `temporal workflow terminate --workflow-id order-<id>` or from the Temporal UI. A retrying order ends on its own when the retries run out.
+- **Close what's still open:** an order the kitchen never marked ready stays **Running** for up to an hour, then completes on its own. To close it sooner, press **Mark Ready**, or terminate it with `temporal workflow terminate --workflow-id order-<id>` or from the Temporal UI. A retrying order ends on its own when the retries run out.
 - **On tmprl-demo.cloud:** press **Delete** in the **Crashable environment** panel when you're done, or let it delete itself after the hour.
 - **To stop locally:** press `Ctrl-C` in the `scripts/start.sh` terminal. It stops the containers or local processes and the dev server.
 

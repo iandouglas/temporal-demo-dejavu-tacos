@@ -24,6 +24,7 @@ public class BackendClient {
     public BackendClient(String baseUrl) {
         this.baseUrl = baseUrl;
         this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         this.gson = new Gson();

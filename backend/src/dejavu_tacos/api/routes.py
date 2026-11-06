@@ -273,6 +273,24 @@ async def push_event(event: OrderEvent):
             queue = config.event_queues[event.order_id]
         else:
             return {"status": "ignored", "reason": "unknown order"}
+
+    # Capture without Mark Ready means the Workflow's wait for the kitchen timed
+    # out, so close the order on the kitchen display and in the panel.
+    store_order = config.store_orders.get(event.order_id)
+    if (
+        event.step == "capture_payment"
+        and store_order
+        and store_order["status"] != "ready"
+    ):
+        store_order["status"] = "ready"
+        await emit_event(
+            event.order_id,
+            "order_ready",
+            StepStatus.COMPLETED,
+            mode=event.mode,
+            detail="No word from the kitchen after 1 hour. Order auto-completed.",
+        )
+
     await queue.put(event.model_dump(mode="json"))
     return {"status": "accepted"}
 

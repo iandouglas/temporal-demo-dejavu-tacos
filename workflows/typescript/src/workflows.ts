@@ -11,6 +11,7 @@ import {
 import type { Activities, OrderInput } from "./activities";
 
 const TASK_QUEUE = "dejavu-tacos";
+const KITCHEN_WAIT_TIMEOUT = "1 hour";
 
 const acts = proxyActivities<Activities>({
   startToCloseTimeout: "10 seconds",
@@ -88,9 +89,10 @@ export async function OrderWorkflow(
     status = "submitting_to_store";
     await submitActs.submitToStore(orderInput);
 
-    // Step 6: Wait for order ready signal (human in the loop)
+    // Step 6: Wait for order ready signal (human in the loop). With no word
+    // from the kitchen, the order completes anyway when the wait times out.
     status = "preparing";
-    await condition(() => orderReady);
+    await condition(() => orderReady, KITCHEN_WAIT_TIMEOUT);
 
     // Step 7: Capture Payment (only after store confirms)
     status = "capturing_payment";
